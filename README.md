@@ -50,27 +50,102 @@ The project includes a robust EDA suite centered on the **UCSD Triton's** offens
 
 ```bash
 ├── FSBO_tritonball.ipynb      # Main analytics and modeling notebook
-├── Play-by-Play.csv           # Raw granular match dataset (excluded from git)
+├── Play-by-Play.csv           # Raw granular match dataset
+├── app/
+│   ├── backend/               # FastAPI + SSE backend (ingestor → predictor → /events)
+│   │   ├── main.py            # ASGI app + /events SSE stream + /healthz
+│   │   ├── ingestor.py        # Watches the live .dvw file, drains new scout codes
+│   │   ├── parser.py          # DataVolley scout-code → Play
+│   │   ├── features.py        # ⛳ STUB — feature builder (plug real one in here)
+│   │   ├── predictor.py       # ⛳ STUB — model interface (plug real model in here)
+│   │   └── schemas.py         # Pydantic types (Play, Prediction)
+│   └── frontend/              # Bench UI (vanilla HTML + JS, subscribes via SSE)
+├── scripts/
+│   └── replay_csv_to_dvw.py   # Dev tool — replays Play-by-Play.csv into a .dvw file
+├── data/                      # Created on first run; default location of live.dvw
 ├── assets/                    # Project visualizations and branding
 └── README.md                  # Project documentation
 ```
 
 ---
 
-## ⚙️ Installation & Usage
+## ⚙️ Notebook (Modeling) — Installation & Usage
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/[your-username]/FSBO-predictibility-score.git
-   ```
-
-2. **Install Dependencies**:
+1. **Install dependencies**:
    ```bash
    pip install pandas numpy torch scikit-learn seaborn matplotlib
    ```
 
-3. **Run the Analysis**:
-   Open `FSBO_tritonball.ipynb` in your preferred Jupyter environment (JupyterLab, VS Code, or Google Colab) and execute the cells sequentially.
+2. **Run the analysis**:
+   Open `FSBO_tritonball.ipynb` in JupyterLab, VS Code, or Colab and execute cells sequentially.
+
+---
+
+## 🛰️ Live Prediction App
+
+A FastAPI backend tails the scout's local DataVolley file (`.dvw`) and pushes
+predictions to a browser-based bench UI over Server-Sent Events. The model and
+feature builder are currently stubs — they'll be swapped for the real artifacts
+in `app/backend/predictor.py` and `app/backend/features.py`.
+
+### Setup
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+### Run (with simulated live data)
+
+In one terminal — start the backend:
+
+```bash
+source .venv/bin/activate
+uvicorn app.backend.main:app --reload --port 8000
+```
+
+Then open <http://localhost:8000> in a browser. You should see "live" in the
+header and an "Awaiting first play…" placeholder.
+
+In a second terminal — replay the historical CSV as if it were live scouting:
+
+```bash
+source .venv/bin/activate
+python scripts/replay_csv_to_dvw.py --reset --delay 1.0
+```
+
+Each emitted play should appear in the UI within ~1 second.
+
+### Run (against a real scout's `.dvw` file)
+
+Set `DVW_PATH` to the scout's safety file. On the same machine:
+
+```bash
+DVW_PATH=/path/to/scout/match.dvw uvicorn app.backend.main:app --port 8000
+```
+
+Across a LAN: mount or sync the scout's file directory to the bench laptop
+(Syncthing or a simple SMB/AFP share works), then point `DVW_PATH` at the
+synced copy. Latency on a local network is well under one second — far below
+the rally cycle.
+
+### Endpoints
+
+| Path | Purpose |
+| :--- | :--- |
+| `GET /`         | Bench UI |
+| `GET /events`   | Server-Sent Events stream of `{play, prediction}` JSON |
+| `GET /healthz`  | Returns `{status, watching}` |
+
+### Plugging the real model in
+
+When the trained model is ready, only two files change:
+
+* `app/backend/features.py` → fill `FeatureBuilder.update` so it returns the feature row your model expects (`prev_1..prev_5`, rotation, score, etc.).
+* `app/backend/predictor.py` → load the model artifact at import time and return real `top_k` probabilities from `predict()`.
+
+Everything upstream (ingestor, SSE, UI) is unchanged.
 
 ---
 

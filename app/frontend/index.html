@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>FSBO — Live Next-Attack Prediction</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>FSBO — Next Attack</h1>
+      <div id="status" class="status status--idle">connecting…</div>
+    </header>
+
+    <main>
+      <section id="prediction" class="prediction">
+        <h2>Predicted next attack</h2>
+        <ol id="topk" class="topk">
+          <li class="topk__placeholder">Awaiting first play…</li>
+        </ol>
+        <p id="predictor-note" class="note"></p>
+      </section>
+
+      <section id="last-play" class="last-play">
+        <h2>Last play</h2>
+        <dl id="last-play-fields">
+          <dt>—</dt><dd>—</dd>
+        </dl>
+      </section>
+
+      <section id="history" class="history">
+        <h2>Recent plays</h2>
+        <ul id="history-list" class="history__list"></ul>
+      </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
