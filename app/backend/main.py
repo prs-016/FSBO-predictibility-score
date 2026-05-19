@@ -30,6 +30,8 @@ from fastapi.staticfiles import StaticFiles
 from sse_starlette.sse import EventSourceResponse
 
 from .ingestor import DvwIngestor
+from .predictor import predict as run_predict
+from .schemas import Prediction, PredictionInput
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 log = logging.getLogger(__name__)
@@ -71,15 +73,16 @@ broadcaster = Broadcaster()
 
 
 async def _ingest_loop(path: Path) -> None:
-    """Background task: drain the ingestor and broadcast each prediction."""
+    """Background task: drain the ingestor and broadcast each touch + (optional) prediction."""
     path.parent.mkdir(parents=True, exist_ok=True)
     ingestor = DvwIngestor(path)
     log.info("ingestor watching %s", path)
     try:
-        async for play, prediction in ingestor.stream():
+        async for touch, prediction_input, prediction in ingestor.stream():
             payload = json.dumps({
-                "play": play.model_dump(),
-                "prediction": prediction.model_dump(),
+                "touch": touch.model_dump(),
+                "features": prediction_input.model_dump() if prediction_input else None,
+                "prediction": prediction.model_dump() if prediction else None,
             })
             broadcaster.publish(payload)
     except asyncio.CancelledError:
@@ -110,6 +113,23 @@ async def healthz() -> dict[str, str]:
     return {"status": "ok", "watching": str(DVW_PATH)}
 
 
+# Counter for the manual prediction path so the response's prediction_count
+# is monotonic and distinct from the live ingestor's counter.
+_manual_count = 0
+
+
+@app.post("/predict")
+async def predict_manual(payload: PredictionInput) -> Prediction:
+    """One-shot prediction from a manually-entered feature row.
+
+    Bypasses the live ingestor entirely — used by the UI's manual-input form
+    to exercise the model with arbitrary inputs.
+    """
+    global _manual_count
+    _manual_count += 1
+    return run_predict(payload, prediction_count=_manual_count)
+
+
 @app.get("/events")
 async def events(request: Request) -> EventSourceResponse:
     queue = broadcaster.subscribe()
@@ -125,7 +145,7 @@ async def events(request: Request) -> EventSourceResponse:
                     # SSE keep-alive comment so proxies don't drop the connection
                     yield {"event": "ping", "data": ""}
                     continue
-                yield {"event": "prediction", "data": payload}
+                yield {"event": "touch", "data": payload}
         finally:
             broadcaster.unsubscribe(queue)
 

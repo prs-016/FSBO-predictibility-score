@@ -1,55 +1,45 @@
 """DataVolley file ingestor.
 
-Tails a `.dvw` file as the scout writes it, parses each new scout-code line,
-and yields `(Play, Prediction)` pairs through an async queue.
+Tails a `.dvw` file as the scout writes it, parses each new line into a
+`Touch`, runs the feature builder, and — when the feature builder emits a
+`PredictionInput` (i.e. the opponent just made a good reception) — calls
+the predictor. Streams `(Touch, Optional[PredictionInput], Optional[Prediction])`
+tuples through an async iterator.
 
-The ingestor is intentionally minimal:
-
-  * **Source-agnostic at the file boundary.** Today the source is a local
-    path. Tomorrow it could be an HTTP-mounted file from the scout's laptop
-    over LAN (the openvolley pattern). Only the path/URL changes; the rest
-    of the pipeline stays the same.
-
-  * **No rally bookkeeping.** Scoring, rotation, and rally segmentation
-    are stateful concerns that belong in the feature builder. The ingestor
-    just streams Plays in file order.
-
-  * **Restart-safe via byte offset.** We remember how many bytes of the
-    file we've already consumed so a restart (or rotation) re-reads only
-    new content. On truncation/shrinkage we re-read from zero.
+This file owns the file-watch side of the pipeline. Stateful match
+bookkeeping lives in `features.py` + `state.py`.
 """
 from __future__ import annotations
 
 import asyncio
 import logging
 from pathlib import Path
-from typing import AsyncIterator
+from typing import AsyncIterator, Optional
 
-from watchfiles import Change, awatch
+from watchfiles import awatch
 
 from .features import FeatureBuilder
-from .parser import parse_scout_line
 from .predictor import predict
-from .schemas import Play, Prediction
+from .parser import parse_scout_line
+from .schemas import Prediction, PredictionInput, TeamSide, Touch
 
 log = logging.getLogger(__name__)
 
 
 class DvwIngestor:
-    """Watches a .dvw file and emits (Play, Prediction) pairs as new lines appear."""
+    """Watches a .dvw file; emits a tuple per parsed touch."""
 
-    def __init__(self, path: Path) -> None:
+    def __init__(self, path: Path, *, opponent_side: TeamSide = "visiting") -> None:
         self.path = path
         self._offset = 0
         self._sequence = 0
-        self._features = FeatureBuilder()
+        self._features = FeatureBuilder(opponent_side=opponent_side)
 
-    async def stream(self) -> AsyncIterator[tuple[Play, Prediction]]:
-        """Yield (Play, Prediction) pairs as the watched file grows.
+    async def stream(self) -> AsyncIterator[tuple[Touch, Optional[PredictionInput], Optional[Prediction]]]:
+        """Yield `(touch, prediction_input | None, prediction | None)` per parsed line.
 
-        Emits everything currently in the file on startup, then waits for changes.
+        Drains any pre-existing content on startup, then waits for changes.
         """
-        # Initial drain — file may already have content (mid-match restart, replay underway).
         async for item in self._drain():
             yield item
 
@@ -63,37 +53,37 @@ class DvwIngestor:
             async for item in self._drain():
                 yield item
 
-    async def _drain(self) -> AsyncIterator[tuple[Play, Prediction]]:
-        """Read everything appended since `self._offset` and emit parsed plays."""
+    async def _drain(self) -> AsyncIterator[tuple[Touch, Optional[PredictionInput], Optional[Prediction]]]:
         if not self.path.exists():
             return
         size = self.path.stat().st_size
         if size < self._offset:
-            # File was truncated/rotated; restart from beginning.
             log.warning("ingestor: %s shrank (%d -> %d); restarting from 0", self.path, self._offset, size)
             self._offset = 0
             self._sequence = 0
-            self._features = FeatureBuilder()
+            self._features = FeatureBuilder(opponent_side=self._features.opponent_side)
         if size == self._offset:
             return
 
-        # Read appended bytes. Holding open briefly is fine for a local file.
         loop = asyncio.get_running_loop()
         chunk = await loop.run_in_executor(None, self._read_appended, size)
         self._offset = size
 
         for line in chunk.splitlines():
             self._sequence += 1
-            play = parse_scout_line(line, sequence=self._sequence)
-            if play is None:
+            touch = parse_scout_line(line, sequence=self._sequence)
+            if touch is None:
                 continue
-            features = self._features.update(play)
-            prediction = predict(features, last_play=play)
-            yield play, prediction
+            prediction_input = self._features.update(touch)
+            prediction = (
+                predict(prediction_input, prediction_count=self._features.prediction_count)
+                if prediction_input is not None
+                else None
+            )
+            yield touch, prediction_input, prediction
 
     def _read_appended(self, size: int) -> str:
         with open(self.path, "rb") as f:
             f.seek(self._offset)
             data = f.read(size - self._offset)
-        # DataVolley files are typically Windows-1252; latin-1 is a safe superset.
         return data.decode("latin-1", errors="replace")

@@ -1,14 +1,19 @@
 """Replay a Volleymetrics CSV export into a `.dvw` file, simulating live scouting.
 
 Reads `Play-by-Play.csv` row-by-row, projects each playable row into one
-DataVolley scout-code line, and appends it to the watched `.dvw` file with a
-configurable delay. The backend ingestor sees those lines exactly as it would
-during a live match.
+"extended scout-code" line, and appends it to the watched `.dvw` file with
+a configurable delay. The backend ingestor sees those lines exactly as it
+would during a live match.
 
-This is a dev tool — it does not generate fully-spec-compliant DataVolley
-files. It only encodes the fields the current parser reads (team, player,
-skill, evaluation, attack/set subcode, zones). Other DataVolley fields are
-filled with `~` to keep column positions intact.
+Line format (dev only — not strict DataVolley):
+
+    <scout_code>|<json_context>
+
+Where `scout_code` is a fixed-position 12-char DataVolley scout code and
+`json_context` is a compact JSON object carrying match-level context the
+12-char scout code can't represent (score, set/point id, phase, etc.).
+The backend parser reads both halves; production DVW would put this same
+context in extra positional fields of the full scout-code line.
 
 Usage:
     python scripts/replay_csv_to_dvw.py \\
@@ -26,6 +31,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import sys
 import time
 from pathlib import Path
@@ -69,8 +75,8 @@ def _team_marker(row: dict[str, str]) -> Optional[str]:
     return None
 
 
-def _build_scout_line(row: dict[str, str]) -> Optional[str]:
-    """Project a CSV row into one DataVolley scout-code line, or None to skip."""
+def _scout_code(row: dict[str, str]) -> Optional[str]:
+    """Build the 12-char fixed-position scout code. Returns None to skip the row."""
     team_marker = _team_marker(row)
     if team_marker is None:
         return None
@@ -100,16 +106,6 @@ def _build_scout_line(row: dict[str, str]) -> Optional[str]:
     sz = start_zone if start_zone.isdigit() and len(start_zone) == 1 else "~"
     ez = end_zone if end_zone.isdigit() and len(end_zone) == 1 else "~"
 
-    # Fixed-position scout code, 12 chars:
-    #   0   : team marker (* or a)
-    #   1-2 : player number
-    #   3   : skill
-    #   4   : evaluation
-    #   5-6 : skill subtype (attack/set combo)
-    #   7-8 : reserved padding
-    #   9   : start zone
-    #   10  : reserved
-    #   11  : end zone
     chars = ["~"] * 12
     chars[0] = team_marker
     chars[1] = player[0]
@@ -121,6 +117,50 @@ def _build_scout_line(row: dict[str, str]) -> Optional[str]:
     chars[9] = sz
     chars[11] = ez
     return "".join(chars)
+
+
+def _context(row: dict[str, str]) -> dict:
+    """Extract the match-level context the 12-char scout code can't carry."""
+    def _int(key: str) -> Optional[int]:
+        v = (row.get(key) or "").strip()
+        try:
+            return int(v)
+        except (ValueError, TypeError):
+            return None
+
+    def _str(key: str) -> Optional[str]:
+        v = (row.get(key) or "").strip()
+        return v or None
+
+    is_timeout = (row.get("timeout") or "").strip().lower() == "t"
+    ctx = {
+        "m": _str("match_id"),
+        "s": _int("set_number"),
+        "p": _int("point_id"),
+        "hs": _int("home_score"),
+        "vs": _int("visiting_score"),
+        "hsp": _int("home_setter_position"),
+        "vsp": _int("visiting_setter_position"),
+        # Use the CSV's `phase` column (NOT `attack_phase`). Training code's
+        # FBSO filter is `point_df['phase'] == 'Reception'`, which is the
+        # downstream truth for prev_1..prev_5 / consecutive_same.
+        "ph": _str("phase"),
+        "sid": _str("set_player_id"),
+        "pd": _int("point_differential"),
+        "to": True if is_timeout else None,
+    }
+    # Drop keys with None values to keep the line compact.
+    return {k: v for k, v in ctx.items() if v is not None}
+
+
+def _build_line(row: dict[str, str]) -> Optional[str]:
+    code = _scout_code(row)
+    if code is None:
+        return None
+    ctx = _context(row)
+    if ctx:
+        return f"{code}|{json.dumps(ctx, separators=(',', ':'))}"
+    return code
 
 
 def main() -> int:
@@ -139,14 +179,13 @@ def main() -> int:
     args.out.parent.mkdir(parents=True, exist_ok=True)
     if args.reset and args.out.exists():
         args.out.unlink()
-    # Touch the file so the backend's watcher sees it immediately.
     args.out.touch(exist_ok=True)
 
     emitted = 0
     with args.csv.open("r", newline="") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            line = _build_scout_line(row)
+            line = _build_line(row)
             if line is None:
                 continue
             with args.out.open("a") as out:

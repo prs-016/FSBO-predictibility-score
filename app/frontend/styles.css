@@ -2,6 +2,7 @@
   --bg: #0f1115;
   --panel: #181b22;
   --panel-2: #20242d;
+  --panel-3: #262b36;
   --text: #e8ecf1;
   --text-dim: #9aa3b2;
   --accent: #4cc9f0;
@@ -47,20 +48,40 @@ header h1 {
 .status--live { color: var(--good); border-color: var(--good); }
 .status--error { color: var(--bad); border-color: var(--bad); }
 
+.badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: var(--panel-2);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+}
+.badge--armed { color: var(--good); border-color: var(--good); }
+.badge--idle { color: var(--text-dim); }
+
 main {
   display: grid;
   grid-template-columns: 2fr 1fr;
   grid-template-areas:
-    "prediction last-play"
+    "manual manual"
+    "prediction features"
+    "last-touch features"
     "history history";
   gap: 1rem;
   padding: 1.5rem;
-  max-width: 1100px;
+  max-width: 1200px;
   margin: 0 auto;
 }
 
+#manual { grid-area: manual; }
 #prediction { grid-area: prediction; }
-#last-play { grid-area: last-play; }
+#features { grid-area: features; }
+#last-touch { grid-area: last-touch; }
 #history { grid-area: history; }
 
 section {
@@ -77,24 +98,119 @@ section h2 {
   letter-spacing: 0.1em;
   color: var(--text-dim);
 }
+section h2 .note { text-transform: none; letter-spacing: 0; font-size: 0.75rem; }
 
+/* ─── Manual prediction form ─────────────────────────────────────────── */
+.manual {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+.manual > h2 { grid-column: 1 / -1; }
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.7rem 1rem;
+}
+
+.form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+
+.form-grid input,
+.form-grid select {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.9rem;
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.form-grid input:focus,
+.form-grid select:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--panel-3);
+}
+
+.req { color: var(--warn); margin-left: 0.15rem; }
+
+.manual__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.btn {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.btn:hover { background: var(--panel-3); border-color: var(--text-dim); }
+.btn--primary {
+  background: var(--accent);
+  color: #0a1419;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+.btn--primary:hover { background: #6dd3f2; border-color: #6dd3f2; }
+.btn--ghost { background: transparent; }
+
+.error { color: var(--bad); font-size: 0.85rem; margin-left: 0.5rem; }
+
+.manual__result {
+  background: var(--panel-2);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+}
+.manual__result h3 {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+}
+
+/* ─── Top-K display (used by both live and manual) ────────────────────── */
 .topk {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 0.6rem;
+  gap: 0.5rem;
 }
 
 .topk li {
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: center;
-  padding: 0.7rem 1rem;
-  background: var(--panel-2);
-  border-radius: 8px;
-  font-size: 1rem;
+  padding: 0.6rem 0.9rem;
+  background: var(--panel-3);
+  border-radius: 6px;
+  font-size: 0.95rem;
 }
+.manual__result .topk li { background: var(--panel); }
 
 .topk li.topk__placeholder {
   color: var(--text-dim);
@@ -103,21 +219,27 @@ section h2 {
 }
 
 .topk__rank { font-weight: 600; color: var(--accent); }
-.topk__category { font-size: 1.15rem; }
+.topk__category { font-size: 1.1rem; }
 .topk__prob { font-variant-numeric: tabular-nums; color: var(--text-dim); }
-.topk li:first-child .topk__category { font-size: 1.4rem; font-weight: 600; }
+.topk li:first-child .topk__category { font-size: 1.3rem; font-weight: 600; }
 
 .note { color: var(--text-dim); font-size: 0.8rem; margin: 0.75rem 0 0; }
 
-#last-play dl {
+#last-touch dl,
+.features__grid {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 0.4rem 0.8rem;
+  gap: 0.35rem 0.8rem;
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
-#last-play dt { color: var(--text-dim); }
-#last-play dd { margin: 0; font-variant-numeric: tabular-nums; }
+#last-touch dt,
+.features__grid dt { color: var(--text-dim); }
+#last-touch dd,
+.features__grid dd { margin: 0; font-variant-numeric: tabular-nums; }
+
+.features__grid dd.is-empty { color: var(--text-dim); font-style: italic; }
+.features__grid dd.is-numeric { font-weight: 500; }
 
 .history__list {
   list-style: none;
@@ -135,3 +257,19 @@ section h2 {
   color: var(--text-dim);
 }
 .history__list li strong { color: var(--text); }
+.history__list li.is-trigger { background: rgba(46, 204, 113, 0.12); color: var(--good); }
+.history__list li.is-trigger strong { color: var(--good); }
+
+@media (max-width: 800px) {
+  main {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "manual"
+      "prediction"
+      "features"
+      "last-touch"
+      "history";
+  }
+  .manual { grid-template-columns: 1fr; }
+  .form-grid { grid-template-columns: repeat(2, 1fr); }
+}
