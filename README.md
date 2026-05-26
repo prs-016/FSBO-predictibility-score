@@ -10,6 +10,22 @@ In elite volleyball, "winning the first swing" is a critical factor in side-out 
 
 ---
 
+## 📂 Data
+
+> **⚠️ Dataset not included in this repository.**
+>
+> The primary dataset (`combined_dvw.csv`) is **~244 MB** and exceeds GitHub's 100 MB file size limit. It is stored in Google Drive and loaded directly in the model script at runtime:
+>
+> ```python
+> SOURCE_FILE = '/content/drive/MyDrive/combined_dvw.csv'
+> ```
+>
+> To run the model, upload `combined_dvw.csv` to the root of your Google Drive (`My Drive/combined_dvw.csv`) and mount Drive in Colab as normal.
+>
+> The previous `Play-by-Play.csv` (a smaller, older dataset) has been removed from this repo and superseded by `combined_dvw.csv`.
+
+---
+
 ## 🚀 Key Features
 
 ### 🔍 Predictive Intelligence
@@ -49,8 +65,7 @@ The project includes a robust EDA suite centered on the **UCSD Triton's** offens
 ## 📂 Project Structure
 
 ```bash
-├── FSBO_tritonball.ipynb      # Main analytics and modeling notebook
-├── Play-by-Play.csv           # Raw granular match dataset
+├── fsbo_final_model.py        # Main analytics and modeling script (replaces FSBO_tritonball.ipynb)
 ├── app/
 │   ├── backend/               # FastAPI + SSE backend (ingestor → predictor → /events)
 │   │   ├── main.py            # ASGI app + /events SSE stream + /healthz
@@ -61,7 +76,7 @@ The project includes a robust EDA suite centered on the **UCSD Triton's** offens
 │   │   └── schemas.py         # Pydantic types (Play, Prediction)
 │   └── frontend/              # Bench UI (vanilla HTML + JS, subscribes via SSE)
 ├── scripts/
-│   └── replay_csv_to_dvw.py   # Dev tool — replays Play-by-Play.csv into a .dvw file
+│   └── replay_csv_to_dvw.py   # Dev tool — replays combined_dvw.csv into a .dvw file
 ├── data/                      # Created on first run; default location of live.dvw
 ├── assets/                    # Project visualizations and branding
 └── README.md                  # Project documentation
@@ -69,15 +84,18 @@ The project includes a robust EDA suite centered on the **UCSD Triton's** offens
 
 ---
 
-## ⚙️ Notebook (Modeling) — Installation & Usage
+## ⚙️ Model — Installation & Usage
 
 1. **Install dependencies**:
    ```bash
    pip install pandas numpy torch scikit-learn seaborn matplotlib
    ```
 
-2. **Run the analysis**:
-   Open `FSBO_tritonball.ipynb` in JupyterLab, VS Code, or Colab and execute cells sequentially.
+2. **Add the dataset to Google Drive**:
+   Upload `combined_dvw.csv` to the root of your Google Drive (`My Drive/combined_dvw.csv`).
+
+3. **Run the model**:
+   Open `fsbo_final_model.py` in Google Colab, mount your Drive when prompted, and execute.
 
 ---
 
