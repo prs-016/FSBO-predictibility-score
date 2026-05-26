@@ -1,209 +1,421 @@
 {
+  "model_type": "bilstm_cnn+gbm500",
   "teams": [
     {
-      "team_id": 112,
-      "team_name": "University of California, Davis",
-      "bundle_size_kb": 549.2
-    },
-    {
-      "team_id": 358,
-      "team_name": "Pepperdine University",
-      "bundle_size_kb": 430.4
-    },
-    {
-      "team_id": 108,
+      "team_id": 108.0,
       "team_name": "California Polytechnic State University",
-      "bundle_size_kb": 530.5
+      "bundle_size_kb": 7696.1,
+      "model_type": "bilstm_cnn",
+      "n_plays": 626,
+      "classes": [
+        "Back",
+        "Front",
+        "Middle",
+        "Pipe"
+      ]
     },
     {
-      "team_id": 115,
-      "team_name": "University of California, Santa Barbara",
-      "bundle_size_kb": 557.3
-    },
-    {
-      "team_id": 215,
-      "team_name": "San Jose State University",
-      "bundle_size_kb": 412.0
-    },
-    {
-      "team_id": 109,
+      "team_id": 109.0,
       "team_name": "California State University, Fullerton",
-      "bundle_size_kb": 549.0
+      "bundle_size_kb": 7731.7,
+      "model_type": "bilstm_cnn",
+      "n_plays": 768,
+      "classes": [
+        "Back",
+        "Front",
+        "Middle",
+        "Pipe"
+      ]
     },
     {
-      "team_id": 361,
-      "team_name": "University of Portland",
-      "bundle_size_kb": 399.9
-    },
-    {
-      "team_id": 363,
-      "team_name": "University of the Pacific",
-      "bundle_size_kb": 544.0
-    },
-    {
-      "team_id": 1388,
-      "team_name": "California Baptist University",
-      "bundle_size_kb": 549.1
-    },
-    {
-      "team_id": 80,
-      "team_name": "Weber State University",
-      "bundle_size_kb": 417.6
-    },
-    {
-      "team_id": 113,
-      "team_name": "University of California, Irvine",
-      "bundle_size_kb": 550.8
-    },
-    {
-      "team_id": 247,
-      "team_name": "Stanford University",
-      "bundle_size_kb": 556.0
-    },
-    {
-      "team_id": 111,
-      "team_name": "California State University, Long Beach",
-      "bundle_size_kb": 545.7
-    },
-    {
-      "team_id": 1378,
-      "team_name": "University of California, San Diego",
-      "bundle_size_kb": 557.8
-    },
-    {
-      "team_id": 76,
-      "team_name": "University of Idaho",
-      "bundle_size_kb": 399.5
-    },
-    {
-      "team_id": 110,
+      "team_id": 110.0,
       "team_name": "California State University, Northridge",
-      "bundle_size_kb": 540.2
+      "bundle_size_kb": 7980.9,
+      "model_type": "bilstm_cnn",
+      "n_plays": 488,
+      "classes": [
+        "Back",
+        "Front",
+        "Middle",
+        "Pipe"
+      ]
     },
     {
-      "team_id": 68,
-      "team_name": "Idaho State University",
-      "bundle_size_kb": 391.2
+      "team_id": 111.0,
+      "team_name": "California State University, Long Beach",
+      "bundle_size_kb": 7885.5,
+      "model_type": "bilstm_cnn",
+      "n_plays": 490,
+      "classes": [
+        "Back",
+        "Front",
+        "Middle",
+        "Pipe"
+      ]
     },
     {
-      "team_id": 114,
+      "team_id": 112.0,
+      "team_name": "University of California, Davis",
+      "bundle_size_kb": 8284.8,
+      "model_type": "bilstm_cnn",
+      "n_plays": 708,
+      "classes": [
+        "Back",
+        "Front",
+        "Middle",
+        "Pipe"
+      ]
+    },
+    {
+      "team_id": 113.0,
+      "team_name": "University of California, Irvine",
+      "bundle_size_kb": 8162.1,
+      "model_type": "bilstm_cnn",
+      "n_plays": 600,
+      "classes": [
+        "Back",
+        "Front",
+        "Middle",
+        "Pipe"
+      ]
+    },
+    {
+      "team_id": 114.0,
       "team_name": "University of California, Riverside",
-      "bundle_size_kb": 549.8
+      "bundle_size_kb": 7502.5,
+      "model_type": "bilstm_cnn",
+      "n_plays": 444,
+      "classes": [
+        "Back",
+        "Front",
+        "Middle",
+        "Pipe"
+      ]
     },
     {
-      "team_id": 116,
+      "team_id": 115.0,
+      "team_name": "University of California, Santa Barbara",
+      "bundle_size_kb": 8519.2,
+      "model_type": "bilstm_cnn",
+      "n_plays": 548,
+      "classes": [
+        "Back",
+        "Front",
+        "Middle",
+        "Pipe"
+      ]
+    },
+    {
+      "team_id": 116.0,
       "team_name": "University of Hawaii",
-      "bundle_size_kb": 562.0
+      "bundle_size_kb": 8446.2,
+      "model_type": "bilstm_cnn",
+      "n_plays": 726,
+      "classes": [
+        "Back",
+        "Front",
+        "Middle",
+        "Pipe"
+      ]
     },
     {
-      "team_id": 348,
-      "team_name": "California State University, Bakersfield",
-      "bundle_size_kb": 561.9
+      "team_id": 1378.0,
+      "team_name": "University of California, San Diego",
+      "bundle_size_kb": 7670.5,
+      "model_type": "bilstm_cnn",
+      "n_plays": 609,
+      "classes": [
+        "Back",
+        "Front",
+        "Middle",
+        "Pipe"
+      ]
     },
     {
-      "team_id": 367,
-      "team_name": "University of San Diego",
-      "bundle_size_kb": 416.2
+      "team_id": 1388.0,
+      "team_name": "California Baptist University",
+      "bundle_size_kb": 7585.2,
+      "model_type": "bilstm_cnn",
+      "n_plays": 248,
+      "classes": [
+        "Back",
+        "Front",
+        "Middle",
+        "Pipe"
+      ]
     },
     {
-      "team_id": 212,
-      "team_name": "California State University, Fresno",
-      "bundle_size_kb": 558.2
-    },
-    {
-      "team_id": 251,
-      "team_name": "University of Colorado, Boulder",
-      "bundle_size_kb": 550.6
-    },
-    {
-      "team_id": 272,
-      "team_name": "University of Arkansas",
-      "bundle_size_kb": 180.2
-    },
-    {
-      "team_id": 58,
-      "team_name": "Creighton University",
-      "bundle_size_kb": 387.2
-    },
-    {
-      "team_id": 70,
-      "team_name": "Southern Utah University",
-      "bundle_size_kb": 418.9
-    },
-    {
-      "team_id": 79,
-      "team_name": "University of Northern Colorado",
-      "bundle_size_kb": 421.5
-    },
-    {
-      "team_id": 222,
-      "team_name": "University of Nevada, Reno",
-      "bundle_size_kb": 178.6
-    },
-    {
-      "team_id": 249,
-      "team_name": "University of California, Berkeley",
-      "bundle_size_kb": 542.2
-    },
-    {
-      "team_id": 214,
-      "team_name": "San Diego State University",
-      "bundle_size_kb": 382.6
-    },
-    {
-      "team_id": 18414,
+      "team_id": 18414.0,
       "team_name": "Vanderbilt University (Women's)",
-      "bundle_size_kb": 534.0
+      "bundle_size_kb": 5776.1,
+      "model_type": "bilstm_cnn",
+      "n_plays": 104,
+      "classes": [
+        "Back",
+        "Front",
+        "Middle",
+        "Pipe"
+      ]
     },
     {
-      "team_id": 217,
+      "team_id": 212.0,
+      "team_name": "California State University, Fresno",
+      "bundle_size_kb": 7668.3,
+      "model_type": "bilstm_cnn",
+      "n_plays": 173,
+      "classes": [
+        "Back",
+        "Front",
+        "Middle",
+        "Pipe"
+      ]
+    },
+    {
+      "team_id": 214.0,
+      "team_name": "San Diego State University",
+      "bundle_size_kb": 4516.3,
+      "model_type": "bilstm_cnn",
+      "n_plays": 119,
+      "classes": [
+        "Back",
+        "Front",
+        "Middle"
+      ]
+    },
+    {
+      "team_id": 215.0,
+      "team_name": "San Jose State University",
+      "bundle_size_kb": 5184.7,
+      "model_type": "bilstm_cnn",
+      "n_plays": 112,
+      "classes": [
+        "Back",
+        "Front",
+        "Middle"
+      ]
+    },
+    {
+      "team_id": 217.0,
       "team_name": "University of Nevada, Las Vegas",
-      "bundle_size_kb": 515.0
+      "bundle_size_kb": 3986.3,
+      "model_type": "bilstm_cnn",
+      "n_plays": 82,
+      "classes": [
+        "Back",
+        "Front",
+        "Middle",
+        "Pipe"
+      ]
     },
     {
-      "team_id": 250,
-      "team_name": "University of California, Los Angeles",
-      "bundle_size_kb": 546.9
-    },
-    {
-      "team_id": 219,
-      "team_name": "University of Wyoming",
-      "bundle_size_kb": 167.4
-    },
-    {
-      "team_id": 69,
-      "team_name": "Montana State University-Bozeman",
-      "bundle_size_kb": 518.7
-    },
-    {
-      "team_id": 257,
-      "team_name": "University of Southern California",
-      "bundle_size_kb": 530.3
-    },
-    {
-      "team_id": 213,
-      "team_name": "Colorado State University",
-      "bundle_size_kb": 431.1
-    },
-    {
-      "team_id": 337,
-      "team_name": "Yale University",
-      "bundle_size_kb": 509.8
-    },
-    {
-      "team_id": 220,
+      "team_id": 220.0,
       "team_name": "Utah State University",
-      "bundle_size_kb": 425.8
+      "bundle_size_kb": 4221.0,
+      "model_type": "bilstm_cnn",
+      "n_plays": 88,
+      "classes": [
+        "Back",
+        "Front",
+        "Middle"
+      ]
     },
     {
-      "team_id": 162,
-      "team_name": "Ball State University",
-      "bundle_size_kb": 404.4
+      "team_id": 222.0,
+      "team_name": "University of Nevada, Reno",
+      "bundle_size_kb": 1209.7,
+      "model_type": "bilstm_cnn",
+      "n_plays": 55,
+      "classes": [
+        "Front",
+        "Middle"
+      ]
     },
     {
-      "team_id": 125,
-      "team_name": "University of Oklahoma",
-      "bundle_size_kb": 390.5
+      "team_id": 247.0,
+      "team_name": "Stanford University",
+      "bundle_size_kb": 6166.9,
+      "model_type": "bilstm_cnn",
+      "n_plays": 94,
+      "classes": [
+        "Back",
+        "Front",
+        "Middle",
+        "Pipe"
+      ]
+    },
+    {
+      "team_id": 249.0,
+      "team_name": "University of California, Berkeley",
+      "bundle_size_kb": 7147.4,
+      "model_type": "bilstm_cnn",
+      "n_plays": 167,
+      "classes": [
+        "Back",
+        "Front",
+        "Middle",
+        "Pipe"
+      ]
+    },
+    {
+      "team_id": 250.0,
+      "team_name": "University of California, Los Angeles",
+      "bundle_size_kb": 5399.7,
+      "model_type": "bilstm_cnn",
+      "n_plays": 61,
+      "classes": [
+        "Back",
+        "Front",
+        "Middle",
+        "Pipe"
+      ]
+    },
+    {
+      "team_id": 251.0,
+      "team_name": "University of Colorado, Boulder",
+      "bundle_size_kb": 6880.6,
+      "model_type": "bilstm_cnn",
+      "n_plays": 103,
+      "classes": [
+        "Back",
+        "Front",
+        "Middle",
+        "Pipe"
+      ]
+    },
+    {
+      "team_id": 348.0,
+      "team_name": "California State University, Bakersfield",
+      "bundle_size_kb": 7288.1,
+      "model_type": "bilstm_cnn",
+      "n_plays": 634,
+      "classes": [
+        "Back",
+        "Front",
+        "Middle",
+        "Pipe"
+      ]
+    },
+    {
+      "team_id": 358.0,
+      "team_name": "Pepperdine University",
+      "bundle_size_kb": 4716.5,
+      "model_type": "bilstm_cnn",
+      "n_plays": 104,
+      "classes": [
+        "Back",
+        "Front",
+        "Middle"
+      ]
+    },
+    {
+      "team_id": 361.0,
+      "team_name": "University of Portland",
+      "bundle_size_kb": 3888.5,
+      "model_type": "bilstm_cnn",
+      "n_plays": 84,
+      "classes": [
+        "Back",
+        "Front",
+        "Middle"
+      ]
+    },
+    {
+      "team_id": 363.0,
+      "team_name": "University of the Pacific",
+      "bundle_size_kb": 7456.7,
+      "model_type": "bilstm_cnn",
+      "n_plays": 137,
+      "classes": [
+        "Back",
+        "Front",
+        "Middle",
+        "Pipe"
+      ]
+    },
+    {
+      "team_id": 367.0,
+      "team_name": "University of San Diego",
+      "bundle_size_kb": 5108.2,
+      "model_type": "bilstm_cnn",
+      "n_plays": 88,
+      "classes": [
+        "Back",
+        "Front",
+        "Middle"
+      ]
+    },
+    {
+      "team_id": 68.0,
+      "team_name": "Idaho State University",
+      "bundle_size_kb": 5055.8,
+      "model_type": "bilstm_cnn",
+      "n_plays": 156,
+      "classes": [
+        "Back",
+        "Front",
+        "Middle"
+      ]
+    },
+    {
+      "team_id": 69.0,
+      "team_name": "Montana State University-Bozeman",
+      "bundle_size_kb": 4492.6,
+      "model_type": "bilstm_cnn",
+      "n_plays": 95,
+      "classes": [
+        "Back",
+        "Front",
+        "Middle",
+        "Pipe"
+      ]
+    },
+    {
+      "team_id": 70.0,
+      "team_name": "Southern Utah University",
+      "bundle_size_kb": 5277.4,
+      "model_type": "bilstm_cnn",
+      "n_plays": 122,
+      "classes": [
+        "Back",
+        "Front",
+        "Middle"
+      ]
+    },
+    {
+      "team_id": 76.0,
+      "team_name": "University of Idaho",
+      "bundle_size_kb": 1982.5,
+      "model_type": "bilstm_cnn",
+      "n_plays": 102,
+      "classes": [
+        "Back",
+        "Front",
+        "Middle"
+      ]
+    },
+    {
+      "team_id": 79.0,
+      "team_name": "University of Northern Colorado",
+      "bundle_size_kb": 4735.4,
+      "model_type": "bilstm_cnn",
+      "n_plays": 80,
+      "classes": [
+        "Back",
+        "Front",
+        "Middle"
+      ]
+    },
+    {
+      "team_id": 80.0,
+      "team_name": "Weber State University",
+      "bundle_size_kb": 4497.7,
+      "model_type": "bilstm_cnn",
+      "n_plays": 86,
+      "classes": [
+        "Back",
+        "Front",
+        "Middle"
+      ]
     }
   ]
 }
