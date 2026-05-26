@@ -1,28 +1,21 @@
-"""Predictor — loads a trained FSBO model bundle or falls back to a uniform stub.
+"""Predictor — loads a BiLSTM_CNN or MLP bundle, falls back to stub.
 
-Model bundles are produced by Section 8 of fsbo_final_model.py and saved as:
-    {MODEL_DIR}/{team_id}_bundle.pkl
+Bundle schema (written by Section 8 of fsbo_final_model.py)
+------------------------------------------------------------
+model_type        : 'bilstm_cnn'  (Section 7) or 'mlp' (Section 4)
+gb                : GradientBoostingClassifier
+bilstm_state_dict : OrderedDict  (bilstm_cnn bundles)
+mlp_state_dict    : OrderedDict  (mlp bundles)
+scaler            : StandardScaler
+feature_encoders  : dict[str, LabelEncoder]
+target_le         : LabelEncoder
+n_features        : int
+n_classes         : int
 
 Environment variables
 ---------------------
-MODEL_DIR   Path to directory containing *_bundle.pkl files.
-TEAM_ID     team_id whose bundle to load (matches the CSV team_id column).
-
-If either variable is unset or the file is missing the stub fires instead,
-returning a uniform distribution — all SSE / UI plumbing still works fine.
-
-Bundle schema (written by fsbo_final_model.py)
-----------------------------------------------
-{
-    "team_id":         str,
-    "gb":              GradientBoostingClassifier,
-    "mlp_state_dict":  OrderedDict  (optional — falls back to GBM-only if absent),
-    "scaler":          StandardScaler,
-    "feature_encoders": dict[str, LabelEncoder],
-    "target_le":       LabelEncoder,
-    "n_features":      int,
-    "n_classes":       int,
-}
+MODEL_DIR   Directory containing {team_id}_bundle.pkl files.
+TEAM_ID     team_id to load (e.g. "1378" for UC San Diego).
 """
 from __future__ import annotations
 
@@ -38,140 +31,133 @@ from .schemas import Prediction, PredictionInput
 
 log = logging.getLogger(__name__)
 
-_NUMERIC_COLS  = ["score_diff", "setter_position", "consecutive_same", "set_number", "timeout_active_3"]
-_CATEGORICAL_COLS = ["prev_1", "prev_2", "prev_3", "prev_4", "prev_5", "setter_id", "reception_quality"]
-_STUB_CATEGORIES = ("Front", "Middle", "Back", "Pipe")
+_NUMERIC_COLS    = ["score_diff", "setter_position", "consecutive_same",
+                    "set_number", "timeout_active_3"]
+_CATEGORICAL_COLS = ["prev_1", "prev_2", "prev_3", "prev_4", "prev_5",
+                     "setter_id", "reception_quality"]
+_STUB_CATS = ("Front", "Middle", "Back", "Pipe")
 
-
-# ── Bundle wrapper ─────────────────────────────────────────────────────────────
 
 class _Bundle:
     def __init__(self, raw: dict) -> None:
-        self.gb     = raw["gb"]
-        self.scaler = raw["scaler"]
-        self.encoders: dict = raw["feature_encoders"]
-        self.target_le      = raw["target_le"]
-        self.classes: list[str] = list(self.target_le.classes_)
-        self.team_id: str   = str(raw.get("team_id", "unknown"))
+        self.gb           = raw["gb"]
+        self.scaler       = raw["scaler"]
+        self.encoders     = raw["feature_encoders"]
+        self.target_le    = raw["target_le"]
+        self.classes      = list(self.target_le.classes_)
+        self.team_id      = str(raw.get("team_id", "unknown"))
+        self.model_type   = raw.get("model_type", "mlp")
+        self.gb_w         = float(raw.get("gb_weight", 0.4))
+        self.nn_w         = float(raw.get("bilstm_weight", raw.get("mlp_weight", 0.6)))
+        self.nn_model     = None
 
-        # Optional MLP (requires torch)
-        self.mlp = None
-        if "mlp_state_dict" in raw:
-            try:
-                import torch
+        n_feat  = raw["n_features"]
+        n_cls   = raw["n_classes"]
+
+        try:
+            import torch
+            if self.model_type == "bilstm_cnn" and "bilstm_state_dict" in raw:
+                from .bilstm_cnn import BiLSTM_CNN
+                m = BiLSTM_CNN(n_feat, n_cls)
+                m.load_state_dict(raw["bilstm_state_dict"])
+                m.eval()
+                self.nn_model = m
+                log.info("predictor: loaded BiLSTM_CNN for team %s", self.team_id)
+            elif "mlp_state_dict" in raw:
                 from .mlp import MLP
-                mlp = MLP(raw["n_features"], raw["n_classes"])
-                mlp.load_state_dict(raw["mlp_state_dict"])
-                mlp.eval()
-                self.mlp = mlp
-                log.info("predictor: MLP loaded for team %s", self.team_id)
-            except Exception:
-                log.warning("predictor: torch not available or MLP load failed — GBM-only mode")
+                m = MLP(n_feat, n_cls)
+                m.load_state_dict(raw["mlp_state_dict"])
+                m.eval()
+                self.nn_model = m
+                log.info("predictor: loaded MLP for team %s", self.team_id)
+        except Exception:
+            log.warning("predictor: neural net load failed — GBM-only for team %s", self.team_id)
 
-    def predict_proba(self, features: PredictionInput) -> list[tuple[str, float]]:
+    def _encode(self, features: PredictionInput) -> np.ndarray:
         feat = features.model_dump()
         row: list[float] = []
-
         for col in _NUMERIC_COLS:
-            val = feat.get(col)
-            row.append(float(val) if val is not None else 0.0)
-
+            v = feat.get(col); row.append(float(v) if v is not None else 0.0)
         for col in _CATEGORICAL_COLS:
             val = str(feat.get(col) or "None")
             le  = self.encoders.get(col)
-            if le is not None and val in le.classes_:
-                row.append(float(le.transform([val])[0]))
-            else:
-                row.append(0.0)
+            row.append(float(le.transform([val])[0])
+                       if le is not None and val in le.classes_ else 0.0)
+        return np.array(row).reshape(1, -1)
 
-        X = np.array(row).reshape(1, -1)
+    def predict_proba(self, features: PredictionInput) -> list[tuple[str, float]]:
+        X    = self._encode(features)
         gb_p = self.gb.predict_proba(X)
 
-        if self.mlp is not None:
+        if self.nn_model is not None:
             try:
                 import torch
                 X_s = self.scaler.transform(X)
                 with torch.no_grad():
-                    mlp_p = torch.softmax(
-                        self.mlp(torch.FloatTensor(X_s)), dim=1
+                    nn_p = torch.softmax(
+                        self.nn_model(torch.FloatTensor(X_s)), dim=1
                     ).numpy()
-                if gb_p.shape[1] == mlp_p.shape[1]:
-                    probs = (0.4 * gb_p + 0.6 * mlp_p)[0]
-                else:
-                    probs = gb_p[0]
+                probs = (self.gb_w * gb_p + self.nn_w * nn_p)[0] \
+                    if gb_p.shape[1] == nn_p.shape[1] else gb_p[0]
             except Exception:
+                log.warning("predictor: inference error; using GBM only")
                 probs = gb_p[0]
         else:
             probs = gb_p[0]
 
-        pairs = [(cls, float(probs[i])) for i, cls in enumerate(self.classes) if i < len(probs)]
-        return sorted(pairs, key=lambda x: x[1], reverse=True)
+        return sorted(
+            [(cls, float(probs[i])) for i, cls in enumerate(self.classes) if i < len(probs)],
+            key=lambda x: x[1], reverse=True
+        )
 
-
-# ── Loading ────────────────────────────────────────────────────────────────────
 
 _bundle: Optional[_Bundle] = None
-_bundle_loaded = False   # track whether we've attempted a load already
+_loaded = False
 
 
 def _load() -> Optional[_Bundle]:
     model_dir = os.environ.get("MODEL_DIR", "").strip()
     team_id   = os.environ.get("TEAM_ID",   "").strip()
-
     if not model_dir or not team_id:
-        log.info("predictor: MODEL_DIR/TEAM_ID not configured — stub mode")
+        log.info("predictor: MODEL_DIR/TEAM_ID not set — stub mode")
         return None
-
     path = Path(model_dir) / f"{team_id}_bundle.pkl"
     if not path.exists():
-        log.warning("predictor: bundle not found at %s — stub mode", path)
+        log.warning("predictor: %s not found — stub mode", path)
         return None
-
     try:
         with open(path, "rb") as fh:
             raw = pickle.load(fh)
         b = _Bundle(raw)
-        log.info("predictor: loaded bundle for team %s (%d classes)", b.team_id, len(b.classes))
+        log.info("predictor: %s bundle loaded (%d classes, model=%s)",
+                 b.team_id, len(b.classes), b.model_type)
         return b
     except Exception:
-        log.exception("predictor: failed to load bundle — stub mode")
+        log.exception("predictor: load failed — stub mode")
         return None
 
 
 def _get() -> Optional[_Bundle]:
-    global _bundle, _bundle_loaded
-    if not _bundle_loaded:
+    global _bundle, _loaded
+    if not _loaded:
         _bundle = _load()
-        _bundle_loaded = True
+        _loaded = True
     return _bundle
 
 
-# ── Public API ─────────────────────────────────────────────────────────────────
-
 def predict(features: PredictionInput, *, prediction_count: int) -> Prediction:
     bundle = _get()
-
     if bundle is None:
-        prob = 1.0 / len(_STUB_CATEGORIES)
-        return Prediction(
-            prediction_count=prediction_count,
-            top_k=[(c, prob) for c in _STUB_CATEGORIES],
-            note="stub-predictor",
-        )
-
+        p = 1.0 / len(_STUB_CATS)
+        return Prediction(prediction_count=prediction_count,
+                          top_k=[(c, p) for c in _STUB_CATS], note="stub")
     try:
         top_k = bundle.predict_proba(features)
-        mode  = "gbm+mlp" if bundle.mlp else "gbm-only"
-        return Prediction(
-            prediction_count=prediction_count,
-            top_k=top_k,
-            note=f"{mode}-team-{bundle.team_id}",
-        )
+        mode  = bundle.model_type if bundle.nn_model else "gbm-only"
+        return Prediction(prediction_count=prediction_count, top_k=top_k,
+                          note=f"{mode}-team-{bundle.team_id}")
     except Exception:
-        log.exception("predictor: inference error — falling back to stub")
-        prob = 1.0 / len(_STUB_CATEGORIES)
-        return Prediction(
-            prediction_count=prediction_count,
-            top_k=[(c, prob) for c in _STUB_CATEGORIES],
-            note="stub-predictor (error fallback)",
-        )
+        log.exception("predictor: inference error")
+        p = 1.0 / len(_STUB_CATS)
+        return Prediction(prediction_count=prediction_count,
+                          top_k=[(c, p) for c in _STUB_CATS], note="stub-error-fallback")
