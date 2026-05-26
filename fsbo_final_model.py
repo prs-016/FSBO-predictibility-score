@@ -666,3 +666,67 @@ for tid in all_teams:
     plt.title(f'Final Ensemble Confusion Matrix (Acc: {final_acc_report:.1%})')
     plt.show()
 
+
+"""## 8. Export Model Bundles to Google Drive
+Saves a per-team pickle bundle (GBM + MLP state dict + encoders + scaler) to
+Google Drive so the live prediction server can load real models.
+
+After running this section:
+1. Bundles land in My Drive/fsbo_models/{team_id}_bundle.pkl
+2. Upload them to your server or mount Drive on the host.
+3. Set MODEL_DIR and TEAM_ID env vars on Render (or wherever you deploy).
+"""
+
+import pickle
+import os
+
+EXPORT_DIR = '/content/drive/MyDrive/fsbo_models'
+os.makedirs(EXPORT_DIR, exist_ok=True)
+
+print(f"Exporting per-team model bundles to {EXPORT_DIR} ...")
+
+for tid in all_teams:
+    df_t = full_df[full_df['team_id'] == tid].copy()
+    t_fbso_exp = extract_team_features(df_t)
+
+    if len(t_fbso_exp) < 50:
+        continue
+
+    t_fbso_exp = t_fbso_exp.sort_values(['match_id', 'set_number', 'point_id']).reset_index(drop=True)
+    t_fbso_exp = t_fbso_exp.groupby(['match_id', 'segment_id'], group_keys=False).apply(add_memory)
+    t_fbso_exp['setter_id'] = t_fbso_exp['setter_id'].fillna(-1.0)
+
+    target_classes_exp = sorted(t_fbso_exp['target_attack'].unique())
+    if len(target_classes_exp) < 2:
+        continue
+
+    # Train a final model on ALL available data for this team
+    try:
+        bundle_model = train_base_model(t_fbso_exp, target_classes_exp)
+    except Exception as e:
+        print(f"  Skipping team {tid}: {e}")
+        continue
+
+    bundle = {
+        'team_id':          tid,
+        'gb':               bundle_model['gb'],
+        'mlp_state_dict':   bundle_model['mlp'].state_dict(),
+        'scaler':           bundle_model['scaler'],
+        'feature_encoders': bundle_model['feature_encoders'],
+        'target_le':        bundle_model['target_le'],
+        'n_features':       len(numeric_cols + categorical_cols),
+        'n_classes':        len(target_classes_exp),
+    }
+
+    export_path = f"{EXPORT_DIR}/{tid}_bundle.pkl"
+    with open(export_path, 'wb') as f:
+        pickle.dump(bundle, f)
+
+    team_name_exp = teams[teams['team_id'] == tid]['team'].iloc[0] if len(teams[teams['team_id'] == tid]) > 0 else str(tid)
+    print(f"  ✓ {team_name_exp} (ID: {tid}) → {export_path}")
+
+print(f"\nDone. {len(all_teams)} teams processed.")
+print("\nNext steps:")
+print("  1. Download the .pkl files from Google Drive.")
+print("  2. Upload them to your server or a public URL.")
+print("  3. On Render: set MODEL_DIR=<path> and TEAM_ID=<your_team_id>.")
