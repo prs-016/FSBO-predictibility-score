@@ -20,10 +20,7 @@ In elite volleyball, "winning the first swing" is a critical factor in side-out 
 > SOURCE_FILE = '/content/drive/MyDrive/combined_dvw.csv'
 > ```
 >
-> To run the model, upload `combined_dvw.csv` to the root of your Google Drive (`My Drive/combined_dvw.csv`) and mount Drive in Colab as normal.
->
-> The previous `Play-by-Play.csv` (a smaller, older dataset) has been removed from this repo and superseded by `combined_dvw.csv`.
-
+> To run the model, upload `combined_dvw.csv` to the root of your Google Drive (`My Drive/combined_dvw.csv`) and mount Drive in Colab as normal
 ---
 
 ## 🚀 Key Features
