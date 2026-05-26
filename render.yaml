@@ -9,9 +9,10 @@ services:
       - key: DVW_PATH
         value: /tmp/live.dvw
       - key: MODEL_DIR
-        value: ""
-        # After exporting models from Colab, upload the pkl files somewhere
-        # accessible and set MODEL_DIR to their directory path.
+        value: ./models
+        # Directory of per-team bundle .pkl files (relative to repo root).
+        # All 41 trained bundles are committed under models/ — no extra setup needed.
       - key: TEAM_ID
-        value: ""
-        # Set to the team_id you want predictions for (e.g. "112" for UCSD).
+        value: "1378"
+        # 1378 = UC San Diego. Change to any exported team_id to switch scouting target.
+        # Full list of available team_ids in models/manifest.json
