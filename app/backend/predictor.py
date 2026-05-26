@@ -20,6 +20,7 @@ TEAM_ID     team_id to load (e.g. "1378" for UC San Diego).
 from __future__ import annotations
 
 import logging
+import warnings
 import os
 import pickle
 from pathlib import Path
@@ -87,12 +88,16 @@ class _Bundle:
 
     def predict_proba(self, features: PredictionInput) -> list[tuple[str, float]]:
         X    = self._encode(features)
-        gb_p = self.gb.predict_proba(X)
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            gb_p = self.gb.predict_proba(X)
 
         if self.nn_model is not None:
             try:
                 import torch
-                X_s = self.scaler.transform(X)
+                with warnings.catch_warnings():
+                    warnings.simplefilter('ignore')
+                    X_s = self.scaler.transform(X)
                 with torch.no_grad():
                     nn_p = torch.softmax(
                         self.nn_model(torch.FloatTensor(X_s)), dim=1
