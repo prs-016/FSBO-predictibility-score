@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: fsbo-live-predictor
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.backend.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DVW_PATH
+        value: /tmp/live.dvw
+      - key: MODEL_DIR
+        value: ""
+        # After exporting models from Colab, upload the pkl files somewhere
+        # accessible and set MODEL_DIR to their directory path.
+      - key: TEAM_ID
+        value: ""
+        # Set to the team_id you want predictions for (e.g. "112" for UCSD).
