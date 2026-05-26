@@ -667,66 +667,109 @@ for tid in all_teams:
     plt.show()
 
 
-"""## 8. Export Model Bundles to Google Drive
-Saves a per-team pickle bundle (GBM + MLP state dict + encoders + scaler) to
-Google Drive so the live prediction server can load real models.
+"""## 8. Export BiLSTM_CNN + GBM Model Bundles to Google Drive
+Exports the Section 7 BiLSTM_CNN + GBM-500 ensemble per team.
+Run this after Section 7 completes. Bundles land in My Drive/fsbo_models/.
 
-After running this section:
-1. Bundles land in My Drive/fsbo_models/{team_id}_bundle.pkl
-2. Upload them to your server or mount Drive on the host.
-3. Set MODEL_DIR and TEAM_ID env vars on Render (or wherever you deploy).
+To deploy:
+  1. Download bundles from Google Drive.
+  2. Upload to your server OR push to GitHub under models/.
+  3. Set MODEL_DIR=./models and TEAM_ID=<id> on Render.
 """
 
-import pickle
-import os
+import pickle, os, torch
+from sklearn.model_selection import train_test_split
 
 EXPORT_DIR = '/content/drive/MyDrive/fsbo_models'
 os.makedirs(EXPORT_DIR, exist_ok=True)
-
-print(f"Exporting per-team model bundles to {EXPORT_DIR} ...")
+print(f"Exporting BiLSTM_CNN + GBM-500 bundles to {EXPORT_DIR} ...")
 
 for tid in all_teams:
     df_t = full_df[full_df['team_id'] == tid].copy()
     t_fbso_exp = extract_team_features(df_t)
-
     if len(t_fbso_exp) < 50:
         continue
 
-    t_fbso_exp = t_fbso_exp.sort_values(['match_id', 'set_number', 'point_id']).reset_index(drop=True)
-    t_fbso_exp = t_fbso_exp.groupby(['match_id', 'segment_id'], group_keys=False).apply(add_memory)
+    t_fbso_exp = t_fbso_exp.sort_values(['match_id','set_number','point_id']).reset_index(drop=True)
+    t_fbso_exp = t_fbso_exp.groupby(['match_id','segment_id'],group_keys=False).apply(add_memory)
     t_fbso_exp['setter_id'] = t_fbso_exp['setter_id'].fillna(-1.0)
 
     target_classes_exp = sorted(t_fbso_exp['target_attack'].unique())
     if len(target_classes_exp) < 2:
         continue
 
-    # Train a final model on ALL available data for this team
-    try:
-        bundle_model = train_base_model(t_fbso_exp, target_classes_exp)
-    except Exception as e:
-        print(f"  Skipping team {tid}: {e}")
+    # Encode features (same as Section 7)
+    categorical_encoders_exp = {}
+    for col in categorical_cols:
+        le = LabelEncoder()
+        t_fbso_exp[col] = le.fit_transform(t_fbso_exp[col].astype(str))
+        categorical_encoders_exp[col] = le
+
+    le_target_exp = LabelEncoder()
+    y_exp = le_target_exp.fit_transform(t_fbso_exp['target_attack'])
+    X_exp = t_fbso_exp[numeric_cols + categorical_cols]
+
+    matches_uniq_exp = t_fbso_exp['match_id'].unique()
+    if len(matches_uniq_exp) < 2:
         continue
+
+    train_m_exp, _ = train_test_split(matches_uniq_exp, test_size=0.2, random_state=42)
+    train_idx_exp  = t_fbso_exp['match_id'].isin(train_m_exp)
+    X_train_exp, y_train_exp = X_exp[train_idx_exp], y_exp[train_idx_exp]
+    if len(X_train_exp) < 10:
+        continue
+
+    scaler_exp = StandardScaler()
+    X_train_s_exp = scaler_exp.fit_transform(X_train_exp)
+    X_all_s_exp   = scaler_exp.transform(X_exp)
+
+    # GBM — Section 7 hyperparams
+    gb_exp = GradientBoostingClassifier(
+        learning_rate=0.01, max_depth=5, n_estimators=500, subsample=0.8, random_state=42)
+    gb_exp.fit(X_train_exp, y_train_exp)
+
+    # BiLSTM_CNN — 250 epochs on full data
+    n_feat_exp = X_exp.shape[1]
+    n_cls_exp  = len(le_target_exp.classes_)
+    bilstm_exp = BiLSTM_CNN(n_feat_exp, n_cls_exp)
+
+    loader_exp = DataLoader(
+        TensorDataset(torch.FloatTensor(X_all_s_exp), torch.LongTensor(y_exp)),
+        batch_size=min(32, len(X_all_s_exp)), shuffle=True, drop_last=True)
+    opt_exp = optim.Adam(bilstm_exp.parameters(), lr=0.001, weight_decay=1e-4)
+    crit_exp = nn.CrossEntropyLoss()
+
+    bilstm_exp.train()
+    for epoch in range(250):
+        for b_x, b_y in loader_exp:
+            opt_exp.zero_grad()
+            crit_exp(bilstm_exp(b_x), b_y).backward()
+            opt_exp.step()
+    bilstm_exp.eval()
 
     bundle = {
         'team_id':          tid,
-        'gb':               bundle_model['gb'],
-        'mlp_state_dict':   bundle_model['mlp'].state_dict(),
-        'scaler':           bundle_model['scaler'],
-        'feature_encoders': bundle_model['feature_encoders'],
-        'target_le':        bundle_model['target_le'],
-        'n_features':       len(numeric_cols + categorical_cols),
-        'n_classes':        len(target_classes_exp),
+        'team_name':        teams[teams['team_id']==tid]['team'].iloc[0] if len(teams[teams['team_id']==tid])>0 else str(tid),
+        'model_type':       'bilstm_cnn',
+        'gb':               gb_exp,
+        'bilstm_state_dict': bilstm_exp.state_dict(),
+        'scaler':           scaler_exp,
+        'feature_encoders': categorical_encoders_exp,
+        'target_le':        le_target_exp,
+        'n_features':       n_feat_exp,
+        'n_classes':        n_cls_exp,
+        'target_classes':   list(le_target_exp.classes_),
+        'n_plays':          len(t_fbso_exp),
+        'gb_weight':        0.4,
+        'bilstm_weight':    0.6,
     }
 
-    export_path = f"{EXPORT_DIR}/{tid}_bundle.pkl"
+    team_name_exp = bundle['team_name']
+    export_path = f"{EXPORT_DIR}/{int(tid)}_bundle.pkl"
     with open(export_path, 'wb') as f:
         pickle.dump(bundle, f)
+    print(f"  ✓ {team_name_exp} ({n_feat_exp} features, {n_cls_exp} classes) → {export_path}")
 
-    team_name_exp = teams[teams['team_id'] == tid]['team'].iloc[0] if len(teams[teams['team_id'] == tid]) > 0 else str(tid)
-    print(f"  ✓ {team_name_exp} (ID: {tid}) → {export_path}")
-
-print(f"\nDone. {len(all_teams)} teams processed.")
-print("\nNext steps:")
-print("  1. Download the .pkl files from Google Drive.")
-print("  2. Upload them to your server or a public URL.")
-print("  3. On Render: set MODEL_DIR=<path> and TEAM_ID=<your_team_id>.")
+print(f"\nAll bundles exported to {EXPORT_DIR}")
+print("Upload {team_id}_bundle.pkl files to your server or push to models/ in the repo.")
+print("Then set MODEL_DIR=./models and TEAM_ID=<id> on Render.")
