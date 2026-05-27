@@ -1,137 +1,174 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>FSBO — Live Next-Attack Prediction</title>
-    <link rel="stylesheet" href="/static/styles.css" />
-  </head>
-  <body>
-    <header>
-      <h1>FSBO — Next Attack</h1>
-      <div id="status" class="status status--idle">connecting…</div>
-    </header>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>FSBO — Live Next-Attack Predictor</title>
+  <link rel="stylesheet" href="/static/styles.css"/>
+</head>
+<body>
+  <header>
+    <div class="header__left">
+      <span class="header__logo">🏐</span>
+      <div>
+        <h1>FSBO Next-Attack Predictor</h1>
+        <p class="header__sub">UC San Diego · BiLSTM_CNN + GBM-500 Ensemble</p>
+      </div>
+    </div>
+    <div id="status" class="status status--idle">connecting…</div>
+  </header>
 
-    <main>
-      <section id="manual" class="manual">
-        <h2>Manual prediction <span class="note">(enter features and click Predict)</span></h2>
-        <form id="manual-form" class="manual__form">
-          <div class="form-grid">
-            <label>reception_quality<span class="req">*</span>
+  <main>
+
+    <!-- ── Manual Prediction ─────────────────────────────────────── -->
+    <section id="manual">
+      <h2>Manual Prediction</h2>
+      <div class="manual-layout">
+
+        <form id="manual-form" class="manual-form">
+
+          <!-- Row 1: core game state -->
+          <div class="field-row">
+            <label class="field field--sm">
+              <span class="field__label">Reception <span class="req">*</span></span>
               <select name="reception_quality" required>
-                <option value="#"># (Perfect)</option>
-                <option value="+">+ (Positive)</option>
+                <option value="#"># Perfect</option>
+                <option value="+">+ Positive</option>
               </select>
             </label>
-            <label>setter_position
+            <label class="field field--sm">
+              <span class="field__label">Score Diff</span>
+              <input type="number" name="score_diff" value="0"/>
+              <span class="field__hint">yours − theirs</span>
+            </label>
+            <label class="field field--sm">
+              <span class="field__label">Set</span>
+              <select name="set_number">
+                <option value="1">Set 1</option>
+                <option value="2">Set 2</option>
+                <option value="3">Set 3</option>
+                <option value="4">Set 4</option>
+                <option value="5">Set 5</option>
+              </select>
+            </label>
+            <label class="field field--sm">
+              <span class="field__label">Setter Rotation</span>
               <select name="setter_position">
-                <option value="">—</option>
-                <option>1</option><option>2</option><option>3</option>
-                <option>4</option><option>5</option><option>6</option>
+                <option value="">Unknown</option>
+                <option value="1">Pos 1 (back right)</option>
+                <option value="2">Pos 2 (front right)</option>
+                <option value="3">Pos 3 (front mid)</option>
+                <option value="4">Pos 4 (front left)</option>
+                <option value="5">Pos 5 (back left)</option>
+                <option value="6">Pos 6 (back mid)</option>
               </select>
             </label>
-            <label>setter_id
-              <input type="text" name="setter_id" placeholder="e.g. -512271" />
+            <label class="field field--sm">
+              <span class="field__label">Streak</span>
+              <input type="number" name="consecutive_same" value="0" min="0"/>
+              <span class="field__hint">same attack in a row</span>
             </label>
-            <label>score_diff
-              <input type="number" name="score_diff" value="0" />
-            </label>
-            <label>set_number
-              <input type="number" name="set_number" value="1" min="1" max="5" />
-            </label>
-            <label>point_id
-              <input type="number" name="point_id" placeholder="—" />
-            </label>
-            <label>segment_id
-              <input type="number" name="segment_id" value="0" min="0" />
-            </label>
-            <label>consecutive_same
-              <input type="number" name="consecutive_same" value="0" min="0" />
-            </label>
-            <label>timeout_active_3
+            <label class="field field--sm">
+              <span class="field__label">Post-Timeout</span>
               <select name="timeout_active_3">
-                <option value="0">0 (no recent timeout)</option>
-                <option value="1">1 (timeout within last 3 plays)</option>
-              </select>
-            </label>
-            <label>match_id
-              <input type="text" name="match_id" placeholder="optional" />
-            </label>
-            <label>prev_1
-              <select name="prev_1">
-                <option>None</option><option>Front</option><option>Middle</option>
-                <option>Back</option><option>Pipe</option>
-              </select>
-            </label>
-            <label>prev_2
-              <select name="prev_2">
-                <option>None</option><option>Front</option><option>Middle</option>
-                <option>Back</option><option>Pipe</option>
-              </select>
-            </label>
-            <label>prev_3
-              <select name="prev_3">
-                <option>None</option><option>Front</option><option>Middle</option>
-                <option>Back</option><option>Pipe</option>
-              </select>
-            </label>
-            <label>prev_4
-              <select name="prev_4">
-                <option>None</option><option>Front</option><option>Middle</option>
-                <option>Back</option><option>Pipe</option>
-              </select>
-            </label>
-            <label>prev_5
-              <select name="prev_5">
-                <option>None</option><option>Front</option><option>Middle</option>
-                <option>Back</option><option>Pipe</option>
+                <option value="0">No</option>
+                <option value="1">Yes (within 3)</option>
               </select>
             </label>
           </div>
-          <div class="manual__actions">
-            <button type="submit" class="btn btn--primary">Predict</button>
-            <button type="button" id="manual-fill-from-live" class="btn">Fill from last live trigger</button>
+
+          <!-- Row 2: attack history on one line -->
+          <div class="history-row">
+            <span class="history-row__label">Attack History</span>
+            <div class="history-row__selects">
+              <label class="history-item">
+                <span class="history-item__label">Last</span>
+                <select name="prev_1" class="history-select">
+                  <option value="None">—</option>
+                  <option>Front</option><option>Middle</option>
+                  <option>Back</option><option>Pipe</option>
+                </select>
+              </label>
+              <span class="history-arrow">←</span>
+              <label class="history-item">
+                <span class="history-item__label">−2</span>
+                <select name="prev_2" class="history-select">
+                  <option value="None">—</option>
+                  <option>Front</option><option>Middle</option>
+                  <option>Back</option><option>Pipe</option>
+                </select>
+              </label>
+              <span class="history-arrow">←</span>
+              <label class="history-item">
+                <span class="history-item__label">−3</span>
+                <select name="prev_3" class="history-select">
+                  <option value="None">—</option>
+                  <option>Front</option><option>Middle</option>
+                  <option>Back</option><option>Pipe</option>
+                </select>
+              </label>
+              <span class="history-arrow">←</span>
+              <label class="history-item">
+                <span class="history-item__label">−4</span>
+                <select name="prev_4" class="history-select">
+                  <option value="None">—</option>
+                  <option>Front</option><option>Middle</option>
+                  <option>Back</option><option>Pipe</option>
+                </select>
+              </label>
+              <span class="history-arrow">←</span>
+              <label class="history-item">
+                <span class="history-item__label">−5</span>
+                <select name="prev_5" class="history-select">
+                  <option value="None">—</option>
+                  <option>Front</option><option>Middle</option>
+                  <option>Back</option><option>Pipe</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn--primary">⚡ Predict</button>
+            <button type="button" id="manual-fill-from-live" class="btn">Fill from last live</button>
             <button type="reset" class="btn btn--ghost">Reset</button>
             <span id="manual-error" class="error" hidden></span>
           </div>
         </form>
-        <div class="manual__result">
-          <h3>Predicted next attack</h3>
-          <ol id="manual-topk" class="topk">
-            <li class="topk__placeholder">Submit the form to get a prediction.</li>
-          </ol>
+
+        <!-- Result panel -->
+        <div class="result-panel" id="manual-result-panel">
+          <p class="result-panel__placeholder">Set game state and click Predict.</p>
+          <ol id="manual-topk" class="topk" hidden></ol>
           <p id="manual-note" class="note"></p>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <section id="prediction" class="prediction">
-        <h2>Live prediction <span id="trigger-state" class="badge">waiting…</span></h2>
-        <ol id="topk" class="topk">
-          <li class="topk__placeholder">Awaiting opponent reception (eval # or +)…</li>
-        </ol>
-        <p id="predictor-note" class="note"></p>
-      </section>
+    <!-- ── Live Prediction ───────────────────────────────────────── -->
+    <section id="live-prediction">
+      <h2>Live Prediction <span id="trigger-state" class="badge">waiting…</span></h2>
+      <ol id="topk" class="topk">
+        <li class="topk__placeholder">Awaiting opponent good reception (#/+)…</li>
+      </ol>
+      <p id="predictor-note" class="note"></p>
+    </section>
 
-      <section id="features" class="features">
-        <h2>Live feature row <span class="note">(matches training schema)</span></h2>
-        <dl id="features-fields" class="features__grid">
-          <dt>—</dt><dd>—</dd>
-        </dl>
-      </section>
+    <!-- ── Live Features ─────────────────────────────────────────── -->
+    <section id="live-features">
+      <h2>Last Feature Row</h2>
+      <dl id="features-fields" class="features-grid">
+        <dt>—</dt><dd>awaiting trigger</dd>
+      </dl>
+    </section>
 
-      <section id="last-touch" class="last-touch">
-        <h2>Last touch</h2>
-        <dl id="last-touch-fields">
-          <dt>—</dt><dd>—</dd>
-        </dl>
-      </section>
+    <!-- ── History ───────────────────────────────────────────────── -->
+    <section id="history">
+      <h2>Touch History</h2>
+      <ul id="history-list" class="history-list"></ul>
+    </section>
 
-      <section id="history" class="history">
-        <h2>Recent touches</h2>
-        <ul id="history-list" class="history__list"></ul>
-      </section>
-    </main>
-
-    <script src="/static/app.js"></script>
-  </body>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
 </html>
