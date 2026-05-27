@@ -19,14 +19,11 @@
   </header>
 
   <main>
-
-    <!-- ── Manual Prediction ─────────────────────────────────── -->
     <section id="manual">
       <h2>Manual Prediction</h2>
       <div class="manual-layout">
         <form id="manual-form" class="manual-form">
 
-          <!-- Row 1: 3 columns -->
           <div class="field-row field-row--3">
             <label class="field">
               <span class="field__label">Reception Quality <span class="req">*</span></span>
@@ -51,7 +48,6 @@
             </label>
           </div>
 
-          <!-- Row 2: 3 columns -->
           <div class="field-row field-row--3">
             <label class="field">
               <span class="field__label">Setter Rotation</span>
@@ -67,18 +63,17 @@
             </label>
             <label class="field">
               <span class="field__label">Same-Attack Streak</span>
-              <input type="number" name="consecutive_same" value="0" min="0" placeholder="# in a row"/>
+              <input type="number" name="consecutive_same" value="0" min="0"/>
             </label>
             <label class="field">
               <span class="field__label">Post-Timeout?</span>
               <select name="timeout_active_3">
                 <option value="0">No</option>
-                <option value="1">Yes — within last 3 plays</option>
+                <option value="1">Yes — within last 3</option>
               </select>
             </label>
           </div>
 
-          <!-- Row 3: attack history on one line -->
           <div class="history-row">
             <span class="history-row__label">Attack History</span>
             <div class="history-row__cells">
@@ -137,17 +132,16 @@
           </div>
         </form>
 
-        <!-- Result -->
-        <div class="result-panel">
+        <!-- id="manual-result-panel" is referenced by app.js -->
+        <div class="result-panel" id="manual-result-panel">
           <p class="result-panel__title">Predicted Next Attack</p>
-          <p class="result-panel__placeholder" id="result-placeholder">Fill in game state and click Predict.</p>
+          <p class="result-panel__placeholder" id="result-placeholder">Set game state and click Predict.</p>
           <ol id="manual-topk" class="topk" hidden></ol>
           <p id="manual-note" class="note"></p>
         </div>
       </div>
     </section>
 
-    <!-- ── Live Prediction ──────────────────────────────────── -->
     <section id="live-prediction">
       <h2>Live Prediction <span id="trigger-state" class="badge">waiting…</span></h2>
       <ol id="topk" class="topk">
@@ -156,7 +150,6 @@
       <p id="predictor-note" class="note"></p>
     </section>
 
-    <!-- ── Live Features ────────────────────────────────────── -->
     <section id="live-features">
       <h2>Last Feature Row</h2>
       <dl id="features-fields" class="features-grid">
@@ -164,13 +157,12 @@
       </dl>
     </section>
 
-    <!-- ── History ──────────────────────────────────────────── -->
     <section id="history">
       <h2>Touch History</h2>
       <ul id="history-list" class="history-list"></ul>
     </section>
-
   </main>
+
   <script src="/static/app.js"></script>
 </body>
 </html>
