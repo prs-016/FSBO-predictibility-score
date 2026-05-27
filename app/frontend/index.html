@@ -24,7 +24,8 @@
       <div class="manual-layout">
         <form id="manual-form" class="manual-form">
 
-          <div class="field-row field-row--3">
+          <!-- Row 1 -->
+          <div class="field-row field-row--4">
             <label class="field">
               <span class="field__label">Reception Quality <span class="req">*</span></span>
               <select name="reception_quality" required>
@@ -32,10 +33,24 @@
                 <option value="+">+ — Positive</option>
               </select>
             </label>
-            <label class="field">
-              <span class="field__label">Score Differential</span>
-              <input type="number" name="score_diff" value="0" placeholder="yours − theirs"/>
-            </label>
+
+            <!-- Score: two boxes + computed diff -->
+            <div class="score-group">
+              <span class="field__label">Score</span>
+              <div class="score-inputs">
+                <div class="score-box">
+                  <span class="score-box__tag">Home</span>
+                  <input id="home-score" type="number" value="0" min="0" max="30"/>
+                </div>
+                <span class="score-dash">—</span>
+                <div class="score-box">
+                  <span class="score-box__tag">Away</span>
+                  <input id="away-score" type="number" value="0" min="0" max="30"/>
+                </div>
+              </div>
+              <span class="score-diff-label">diff: <strong id="diff-display">0</strong></span>
+            </div>
+
             <label class="field">
               <span class="field__label">Set Number</span>
               <select name="set_number">
@@ -46,9 +61,7 @@
                 <option value="5">Set 5</option>
               </select>
             </label>
-          </div>
 
-          <div class="field-row field-row--3">
             <label class="field">
               <span class="field__label">Setter Rotation</span>
               <select name="setter_position">
@@ -61,9 +74,13 @@
                 <option value="6">Pos 6 · back-mid</option>
               </select>
             </label>
+          </div>
+
+          <!-- Row 2 -->
+          <div class="field-row field-row--2">
             <label class="field">
               <span class="field__label">Same-Attack Streak</span>
-              <input type="number" name="consecutive_same" value="0" min="0"/>
+              <input type="number" name="consecutive_same" value="0" min="0" max="20"/>
             </label>
             <label class="field">
               <span class="field__label">Post-Timeout?</span>
@@ -74,6 +91,7 @@
             </label>
           </div>
 
+          <!-- Row 3: attack history -->
           <div class="history-row">
             <span class="history-row__label">Attack History</span>
             <div class="history-row__cells">
@@ -132,10 +150,9 @@
           </div>
         </form>
 
-        <!-- id="manual-result-panel" is referenced by app.js -->
         <div class="result-panel" id="manual-result-panel">
           <p class="result-panel__title">Predicted Next Attack</p>
-          <p class="result-panel__placeholder" id="result-placeholder">Set game state and click Predict.</p>
+          <p id="result-placeholder" class="result-panel__placeholder">Set game state and click Predict.</p>
           <ol id="manual-topk" class="topk" hidden></ol>
           <p id="manual-note" class="note"></p>
         </div>
@@ -162,7 +179,6 @@
       <ul id="history-list" class="history-list"></ul>
     </section>
   </main>
-
   <script src="/static/app.js"></script>
 </body>
 </html>
