@@ -246,3 +246,33 @@ section h2 {
   .history-row  { flex-direction: column; align-items: flex-start; }
   .history-row__cells { flex-wrap: wrap; }
 }
+
+/* ── Score group ──────────────────────────────────────────── */
+.score-group {
+  display: flex; flex-direction: column; gap: 0.3rem;
+}
+.score-inputs {
+  display: flex; align-items: center; gap: 0.4rem;
+}
+.score-box {
+  display: flex; flex-direction: column; align-items: center; gap: 0.15rem; flex: 1;
+}
+.score-box__tag {
+  font-size: 0.6rem; text-transform: uppercase;
+  letter-spacing: 0.07em; color: var(--dim);
+}
+.score-box input {
+  background: var(--panel-2); color: var(--text);
+  border: 1px solid var(--border); border-radius: 7px;
+  padding: 0.5rem 0.4rem; font-size: 1rem; font-weight: 600;
+  font-family: inherit; width: 100%; text-align: center;
+  font-variant-numeric: tabular-nums;
+  transition: border-color 0.15s;
+}
+.score-box input:focus { outline: none; border-color: var(--accent); background: var(--panel-3); }
+.score-dash { color: var(--dim); font-size: 1rem; margin-top: 14px; }
+.score-diff-label {
+  font-size: 0.7rem; color: var(--dim); text-align: center;
+}
+.field-row--4 { grid-template-columns: repeat(4, 1fr); }
+.field-row--2 { grid-template-columns: repeat(2, 1fr); }
