@@ -12,8 +12,22 @@ const manualNoteEl = document.getElementById("manual-note");
 const manualErrEl  = document.getElementById("manual-error");
 const fillBtn      = document.getElementById("manual-fill-from-live");
 const placeholder  = document.getElementById("result-placeholder");
+const homeScoreEl  = document.getElementById("home-score");
+const awayScoreEl  = document.getElementById("away-score");
+const diffDisplay  = document.getElementById("diff-display");
 
 let lastLiveFeatures = null;
+
+// ── Score diff live display ─────────────────────────────────────────
+function updateDiff() {
+  const h = parseInt(homeScoreEl.value) || 0;
+  const a = parseInt(awayScoreEl.value) || 0;
+  const d = h - a;
+  diffDisplay.textContent = (d > 0 ? "+" : "") + d;
+  diffDisplay.style.color = d > 0 ? "var(--good)" : d < 0 ? "var(--bad)" : "var(--dim)";
+}
+homeScoreEl.addEventListener("input", updateDiff);
+awayScoreEl.addEventListener("input", updateDiff);
 
 function esc(s) {
   return String(s).replace(/[&<>"']/g, c =>
@@ -32,7 +46,7 @@ function showError(msg) {
   manualErrEl.textContent = msg || "";
 }
 
-// ── render top-k with probability bars ─────────────────────────────
+// ── Top-K ───────────────────────────────────────────────────────────
 function renderTopK(target, topK) {
   if (!topK || !topK.length) {
     target.innerHTML = '<li class="topk__placeholder">No prediction.</li>';
@@ -51,15 +65,12 @@ function renderTopK(target, topK) {
   });
 }
 
-// ── feature row ─────────────────────────────────────────────────────
+// ── Feature row ─────────────────────────────────────────────────────
 const FEATURE_LABELS = {
-  reception_quality: "Reception",
-  set_number:        "Set",
-  score_diff:        "Score Diff",
-  setter_position:   "Setter Pos",
-  consecutive_same:  "Streak",
-  timeout_active_3:  "Post-TO",
-  prev_1: "Last", prev_2: "−2", prev_3: "−3", prev_4: "−4", prev_5: "−5",
+  reception_quality:"Reception", set_number:"Set", score_diff:"Score Diff",
+  setter_position:"Setter Pos", consecutive_same:"Streak",
+  timeout_active_3:"Post-TO",
+  prev_1:"Last", prev_2:"−2", prev_3:"−3", prev_4:"−4", prev_5:"−5",
 };
 const SHOW_FEATURES = ["reception_quality","set_number","score_diff",
   "setter_position","consecutive_same","timeout_active_3",
@@ -77,7 +88,7 @@ function renderFeatures(features) {
   }).join("");
 }
 
-// ── touch history ───────────────────────────────────────────────────
+// ── History ─────────────────────────────────────────────────────────
 function appendHistory(touch, isTrigger) {
   const li = document.createElement("li");
   const side = touch.team_side === "home" ? "H" : "V";
@@ -88,21 +99,28 @@ function appendHistory(touch, isTrigger) {
   while (historyEl.children.length > HISTORY_MAX) historyEl.removeChild(historyEl.lastChild);
 }
 
-// ── manual form ─────────────────────────────────────────────────────
-const INT_FIELDS  = new Set(["score_diff","setter_position","set_number","consecutive_same","timeout_active_3"]);
+// ── Manual form ─────────────────────────────────────────────────────
+const INT_FIELDS  = new Set(["set_number","consecutive_same","timeout_active_3"]);
 const NULL_FIELDS = new Set(["setter_position","setter_id"]);
 
 function collectPayload() {
   const fd = new FormData(manualForm);
   const out = {};
+
+  // Compute score_diff from the two separate score inputs
+  const home = parseInt(homeScoreEl.value) || 0;
+  const away = parseInt(awayScoreEl.value) || 0;
+  out.score_diff = home - away;
+
+  // setter_position: convert to int or null
+  const sp = manualForm.querySelector('[name="setter_position"]').value.trim();
+  out.setter_position = sp ? parseInt(sp) : null;
+
   for (const [k, raw] of fd.entries()) {
+    if (k === "setter_position") continue; // handled above
     const s = String(raw).trim();
-    if (!s && NULL_FIELDS.has(k)) { out[k] = null; continue; }
     if (INT_FIELDS.has(k)) {
-      if (!s) { if (NULL_FIELDS.has(k)) out[k] = null; continue; }
-      const n = Number(s);
-      if (!Number.isFinite(n)) throw new Error(`${k} must be a number (got "${s}")`);
-      out[k] = Math.trunc(n); continue;
+      out[k] = parseInt(s) || 0; continue;
     }
     out[k] = s;
   }
@@ -114,14 +132,9 @@ manualForm.addEventListener("submit", async e => {
   showError(null);
 
   let payload;
-  try {
-    payload = collectPayload();
-  } catch (err) {
-    showError(err.message);
-    return;
-  }
+  try { payload = collectPayload(); }
+  catch (err) { showError(err.message); return; }
 
-  // Show loading state
   manualTopkEl.hidden = false;
   manualTopkEl.innerHTML = '<li class="topk__placeholder">Running model…</li>';
   if (placeholder) placeholder.hidden = true;
@@ -133,9 +146,8 @@ manualForm.addEventListener("submit", async e => {
       body: JSON.stringify(payload),
     });
     if (!res.ok) {
-      const txt = await res.text();
-      showError(`Server error ${res.status}: ${txt.slice(0, 200)}`);
-      manualTopkEl.innerHTML = '<li class="topk__placeholder">Error — see message below.</li>';
+      showError(`Server error ${res.status}: ${(await res.text()).slice(0,200)}`);
+      manualTopkEl.innerHTML = '<li class="topk__placeholder">Error.</li>';
       return;
     }
     const pred = await res.json();
@@ -147,12 +159,26 @@ manualForm.addEventListener("submit", async e => {
   }
 });
 
+// Reset also resets the score display
+manualForm.addEventListener("reset", () => {
+  setTimeout(updateDiff, 0);
+  if (placeholder) placeholder.hidden = false;
+  manualTopkEl.hidden = true;
+  manualNoteEl.textContent = "";
+  showError(null);
+});
+
 fillBtn.addEventListener("click", () => {
   if (!lastLiveFeatures) {
-    showError("No live trigger yet — wait for a green touch in the history first.");
+    showError("No live trigger yet — wait for a green touch to appear in the history below.");
     return;
   }
   showError(null);
+  // score_diff → split back into home/away (can't know exact scores, just show diff)
+  const diff = lastLiveFeatures.score_diff || 0;
+  homeScoreEl.value = diff > 0 ? diff : 0;
+  awayScoreEl.value = diff < 0 ? -diff : 0;
+  updateDiff();
   for (const el of manualForm.elements) {
     if (!el.name || !(el.name in lastLiveFeatures)) continue;
     const v = lastLiveFeatures[el.name];
@@ -167,9 +193,7 @@ function connect() {
   renderFeatures(null);
 
   const es = new EventSource("/events");
-
   es.addEventListener("open", () => setStatus("live", "status--live"));
-
   es.addEventListener("touch", e => {
     try {
       const msg = JSON.parse(e.data);
@@ -185,11 +209,8 @@ function connect() {
       } else {
         setTrigger(false);
       }
-    } catch (err) {
-      console.error("SSE parse error", err);
-    }
+    } catch (err) { console.error("SSE parse error", err); }
   });
-
   es.addEventListener("ping", () => {});
   es.addEventListener("error", () => setStatus("disconnected — retrying", "status--error"));
 }
