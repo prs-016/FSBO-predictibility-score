@@ -15,8 +15,93 @@ const placeholder  = document.getElementById("result-placeholder");
 const homeScoreEl  = document.getElementById("home-score");
 const awayScoreEl  = document.getElementById("away-score");
 const diffDisplay  = document.getElementById("diff-display");
+const outcomeRow   = document.getElementById("outcome-row");
+const historyHint  = document.getElementById("history-source");
+const clearHistBtn = document.getElementById("manual-clear-history");
 
 let lastLiveFeatures = null;
+
+// ── Rolling attack history (client-side) ─────────────────────────────
+// Most-recent first. prev_1 = recordedAttacks[0], prev_2 = [1], …, prev_5 = [4].
+// Populated when the user clicks an outcome button after a manual prediction.
+// Persists in localStorage so a refresh doesn't lose recorded outcomes.
+const HISTORY_KEY = "fsbo:attackHistory";
+const HISTORY_LEN = 5;
+const PREV_KEYS = ["prev_1","prev_2","prev_3","prev_4","prev_5"];
+const OUTCOME_CATEGORIES = ["Front","Middle","Back","Pipe"];
+
+let recordedAttacks = loadHistory();
+
+function loadHistory() {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    return arr.filter(x => OUTCOME_CATEGORIES.includes(x)).slice(0, HISTORY_LEN);
+  } catch { return []; }
+}
+
+function saveHistory() {
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(recordedAttacks)); }
+  catch { /* localStorage disabled — best-effort */ }
+}
+
+function clearHistory() {
+  recordedAttacks = [];
+  saveHistory();
+  syncPrevFieldsFromHistory();
+  updateHistoryHint();
+}
+
+function recordOutcome(category) {
+  if (!OUTCOME_CATEGORIES.includes(category)) return;  // "Skip" passes "" → no-op
+  recordedAttacks.unshift(category);
+  recordedAttacks = recordedAttacks.slice(0, HISTORY_LEN);
+  saveHistory();
+  syncPrevFieldsFromHistory();
+  updateHistoryHint();
+}
+
+// Streak of leading entries that match recordedAttacks[0]. Mirrors the
+// `consecutive_same` shift-by-one math in add_memory: number of prior
+// attacks identical to the most recent one (not counting it).
+function computeConsecutiveSame() {
+  if (recordedAttacks.length < 2) return 0;
+  const head = recordedAttacks[0];
+  let n = 0;
+  for (let i = 1; i < recordedAttacks.length; i++) {
+    if (recordedAttacks[i] === head) n++;
+    else break;
+  }
+  return n;
+}
+
+function syncPrevFieldsFromHistory() {
+  PREV_KEYS.forEach((key, i) => {
+    const el = manualForm.querySelector(`[name="${key}"]`);
+    if (!el) return;
+    const val = recordedAttacks[i] ?? "None";
+    el.value = val;
+    el.classList.toggle("is-auto", i < recordedAttacks.length);
+  });
+  const csEl = manualForm.querySelector('[name="consecutive_same"]');
+  if (csEl && recordedAttacks.length > 0) {
+    csEl.value = String(computeConsecutiveSame());
+    csEl.classList.add("is-auto");
+  }
+}
+
+function updateHistoryHint() {
+  if (!historyHint) return;
+  if (recordedAttacks.length === 0) {
+    historyHint.textContent = "manual entry";
+    historyHint.classList.remove("history-row__hint--tracked");
+  } else {
+    historyHint.textContent = `tracked: ${recordedAttacks.join(" ← ")}`;
+    historyHint.classList.add("history-row__hint--tracked");
+  }
+}
 
 // ── Score diff live display ─────────────────────────────────────────
 function updateDiff() {
@@ -153,18 +238,56 @@ manualForm.addEventListener("submit", async e => {
     const pred = await res.json();
     renderTopK(manualTopkEl, pred.top_k);
     manualNoteEl.textContent = `${pred.note} · prediction #${pred.prediction_count}`;
+
+    // Reveal outcome buttons so the user can record what actually happened.
+    // Recording an outcome → prev_1..prev_5 auto-fill on the next predict.
+    if (outcomeRow) {
+      outcomeRow.hidden = false;
+      outcomeRow.querySelectorAll(".outcome-btn").forEach(b => b.classList.remove("was-recorded"));
+    }
   } catch (err) {
     showError("Network error: " + err.message);
     manualTopkEl.innerHTML = '<li class="topk__placeholder">Network error.</li>';
   }
 });
 
-// Reset also resets the score display
+// Outcome-button delegation: log the click → update history → flash the button.
+if (outcomeRow) {
+  outcomeRow.addEventListener("click", e => {
+    const btn = e.target.closest(".outcome-btn");
+    if (!btn) return;
+    const outcome = btn.dataset.outcome || "";
+    recordOutcome(outcome);
+    outcomeRow.querySelectorAll(".outcome-btn").forEach(b => b.classList.remove("was-recorded"));
+    if (outcome) btn.classList.add("was-recorded");
+  });
+}
+
+if (clearHistBtn) {
+  clearHistBtn.addEventListener("click", () => {
+    clearHistory();
+    PREV_KEYS.forEach(k => {
+      const el = manualForm.querySelector(`[name="${k}"]`);
+      if (el) { el.value = "None"; el.classList.remove("is-auto"); }
+    });
+    const csEl = manualForm.querySelector('[name="consecutive_same"]');
+    if (csEl) { csEl.value = "0"; csEl.classList.remove("is-auto"); }
+  });
+}
+
+// Reset also resets the score display, hides outcome row, and re-applies
+// the recorded history so prev_* doesn't snap back to "None" when there's
+// real history. Form reset itself is intentionally non-destructive to
+// recorded outcomes — use the dedicated Clear History button for that.
 manualForm.addEventListener("reset", () => {
-  setTimeout(updateDiff, 0);
+  setTimeout(() => {
+    updateDiff();
+    syncPrevFieldsFromHistory();
+  }, 0);
   if (placeholder) placeholder.hidden = false;
   manualTopkEl.hidden = true;
   manualNoteEl.textContent = "";
+  if (outcomeRow) outcomeRow.hidden = true;
   showError(null);
 });
 
@@ -214,5 +337,9 @@ function connect() {
   es.addEventListener("ping", () => {});
   es.addEventListener("error", () => setStatus("disconnected — retrying", "status--error"));
 }
+
+// Rehydrate form fields from the persisted attack history (if any).
+syncPrevFieldsFromHistory();
+updateHistoryHint();
 
 connect();

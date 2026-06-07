@@ -116,6 +116,19 @@ section h2 {
   font-size: 0.68rem; text-transform: uppercase;
   letter-spacing: 0.07em; color: var(--dim);
   white-space: nowrap;
+  display: flex; flex-direction: column; gap: 0.2rem;
+}
+.history-row__hint {
+  font-size: 0.6rem; text-transform: none;
+  letter-spacing: 0; color: var(--dim);
+  font-style: italic; font-weight: normal;
+}
+.history-row__hint--tracked {
+  color: var(--good); font-style: normal;
+}
+.history-cell select.is-auto {
+  background: rgba(76,201,240,0.08);
+  border-color: rgba(76,201,240,0.3);
 }
 .history-row__cells {
   display: flex; align-items: center; gap: 0.4rem; flex: 1;
@@ -207,6 +220,40 @@ section h2 {
 .topk li:first-child .topk__prob { color: var(--accent); font-weight: 700; }
 
 .note { font-size: 0.74rem; color: var(--dim); }
+
+/* ── Outcome buttons (record actual result → history) ──────────────── */
+.outcome-row {
+  margin-top: 0.7rem; padding-top: 0.7rem;
+  border-top: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 0.45rem;
+}
+.outcome-row__label {
+  font-size: 0.68rem; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--dim);
+}
+.outcome-row__buttons {
+  display: flex; flex-wrap: wrap; gap: 0.4rem;
+}
+.outcome-btn {
+  flex: 1 1 0; min-width: 60px;
+  background: var(--panel-3); color: var(--text);
+  border: 1px solid var(--border); border-radius: 6px;
+  padding: 0.42rem 0.5rem; font-size: 0.82rem; font-weight: 600;
+  font-family: inherit; cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, transform 0.06s;
+}
+.outcome-btn:hover {
+  background: rgba(76,201,240,0.12);
+  border-color: var(--accent);
+}
+.outcome-btn:active { transform: scale(0.97); }
+.outcome-btn--skip {
+  color: var(--dim); font-weight: normal; font-style: italic;
+}
+.outcome-btn.was-recorded {
+  background: rgba(46,204,113,0.15);
+  border-color: var(--good); color: var(--good);
+}
 
 /* ── Features grid ────────────────────────────────── */
 .features-grid {

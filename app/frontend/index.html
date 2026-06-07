@@ -93,7 +93,10 @@
 
           <!-- Row 3: attack history -->
           <div class="history-row">
-            <span class="history-row__label">Attack History</span>
+            <span class="history-row__label">
+              Attack History
+              <span class="history-row__hint" id="history-source">manual entry</span>
+            </span>
             <div class="history-row__cells">
               <div class="history-cell">
                 <span class="history-cell__tag">Most recent</span>
@@ -145,6 +148,7 @@
           <div class="form-actions">
             <button type="submit" class="btn btn--primary">⚡ Predict</button>
             <button type="button" id="manual-fill-from-live" class="btn">Fill from last live</button>
+            <button type="button" id="manual-clear-history" class="btn btn--ghost" title="Clear the in-app rolling attack history">Clear History</button>
             <button type="reset" class="btn btn--ghost">Reset</button>
             <span id="manual-error" class="error" hidden></span>
           </div>
@@ -155,6 +159,17 @@
           <p id="result-placeholder" class="result-panel__placeholder">Set game state and click Predict.</p>
           <ol id="manual-topk" class="topk" hidden></ol>
           <p id="manual-note" class="note"></p>
+
+          <div id="outcome-row" class="outcome-row" hidden>
+            <p class="outcome-row__label">What actually happened?</p>
+            <div class="outcome-row__buttons">
+              <button type="button" class="outcome-btn" data-outcome="Front">Front</button>
+              <button type="button" class="outcome-btn" data-outcome="Middle">Middle</button>
+              <button type="button" class="outcome-btn" data-outcome="Back">Back</button>
+              <button type="button" class="outcome-btn" data-outcome="Pipe">Pipe</button>
+              <button type="button" class="outcome-btn outcome-btn--skip" data-outcome="">Skip</button>
+            </div>
+          </div>
         </div>
       </div>
     </section>
