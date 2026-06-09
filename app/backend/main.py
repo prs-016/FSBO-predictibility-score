@@ -29,6 +29,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sse_starlette.sse import EventSourceResponse
 
+from .demo_fixture import DEMO_LINES
 from .ingestor import DvwIngestor
 from .predictor import predict as run_predict
 from .schemas import Prediction, PredictionInput
@@ -106,6 +107,53 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="FSBO live prediction", lifespan=lifespan)
+
+# ── Demo replay state ────────────────────────────────────────────────
+_demo_task: asyncio.Task | None = None
+
+
+async def _demo_replay(path: Path, delay: float) -> None:
+    """Append DEMO_LINES one at a time to the watched DVW file."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("")          # reset so ingestor replays from scratch
+    log.info("demo replay started — %d lines, %.2fs delay", len(DEMO_LINES), delay)
+    try:
+        for line in DEMO_LINES:
+            await asyncio.sleep(delay)
+            with path.open("a") as f:
+                f.write(line + "\n")
+        log.info("demo replay finished")
+    except asyncio.CancelledError:
+        log.info("demo replay cancelled")
+        raise
+
+
+@app.get("/demo/start")
+async def demo_start(delay: float = 0.8) -> dict[str, str]:
+    """Reset the watched DVW file and replay the bundled demo lines.
+
+    Query param `delay` controls seconds between plays (default 0.8).
+    Safe to call multiple times — cancels any in-progress replay first.
+    """
+    global _demo_task
+    if _demo_task and not _demo_task.done():
+        _demo_task.cancel()
+        try:
+            await _demo_task
+        except (asyncio.CancelledError, Exception):  # noqa: BLE001
+            pass
+    _demo_task = asyncio.create_task(_demo_replay(DVW_PATH, max(0.1, delay)))
+    return {"status": "started", "lines": str(len(DEMO_LINES)), "delay": str(delay)}
+
+
+@app.post("/demo/stop")
+async def demo_stop() -> dict[str, str]:
+    """Cancel an in-progress demo replay."""
+    global _demo_task
+    if _demo_task and not _demo_task.done():
+        _demo_task.cancel()
+        return {"status": "stopped"}
+    return {"status": "not_running"}
 
 
 @app.get("/healthz")

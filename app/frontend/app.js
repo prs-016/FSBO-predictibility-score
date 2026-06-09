@@ -1,5 +1,6 @@
 const HISTORY_MAX = 16;
 
+const demoBtnEl    = document.getElementById("demo-btn");
 const statusEl     = document.getElementById("status");
 const triggerEl    = document.getElementById("trigger-state");
 const topkEl       = document.getElementById("topk");
@@ -341,5 +342,29 @@ function connect() {
 // Rehydrate form fields from the persisted attack history (if any).
 syncPrevFieldsFromHistory();
 updateHistoryHint();
+
+// ── Demo replay ──────────────────────────────────────────────────────
+let _demoRunning = false;
+
+demoBtnEl.addEventListener("click", async () => {
+  if (_demoRunning) {
+    await fetch("/demo/stop", { method: "POST" });
+    _demoRunning = false;
+    demoBtnEl.textContent = "▶ Start Demo";
+    demoBtnEl.classList.remove("running");
+  } else {
+    demoBtnEl.disabled = true;
+    demoBtnEl.textContent = "Starting…";
+    try {
+      await fetch("/demo/start?delay=0.8");
+      _demoRunning = true;
+      demoBtnEl.textContent = "■ Stop Demo";
+      demoBtnEl.classList.add("running");
+    } catch {
+      demoBtnEl.textContent = "▶ Start Demo";
+    }
+    demoBtnEl.disabled = false;
+  }
+});
 
 connect();

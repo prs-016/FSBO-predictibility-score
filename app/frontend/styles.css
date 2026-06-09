@@ -25,6 +25,7 @@ header {
   background: var(--panel); border-bottom: 1px solid var(--border);
 }
 .header__left  { display: flex; align-items: center; gap: 0.7rem; }
+.header__right { display: flex; align-items: center; gap: 0.75rem; }
 .header__logo  { font-size: 1.5rem; }
 header h1      { font-size: 1.05rem; font-weight: 700; }
 .header__sub   { font-size: 0.72rem; color: var(--dim); margin-top: 0.15rem; }
@@ -108,14 +109,13 @@ section h2 {
 
 /* ── Attack history row ───────────────────────────── */
 .history-row {
-  display: flex; align-items: center; gap: 1rem;
+  display: flex; flex-direction: column; gap: 0.55rem;
   background: var(--panel-2); border: 1px solid var(--border);
   border-radius: 8px; padding: 0.7rem 1rem;
 }
 .history-row__label {
   font-size: 0.68rem; text-transform: uppercase;
   letter-spacing: 0.07em; color: var(--dim);
-  white-space: nowrap;
   display: flex; flex-direction: column; gap: 0.2rem;
 }
 .history-row__hint {
@@ -131,20 +131,22 @@ section h2 {
   border-color: rgba(76,201,240,0.3);
 }
 .history-row__cells {
-  display: flex; align-items: center; gap: 0.4rem; flex: 1;
+  display: flex; align-items: flex-end; gap: 0.35rem;
+  overflow-x: auto; padding-bottom: 2px;
 }
 .history-cell {
   display: flex; flex-direction: column;
-  align-items: center; gap: 0.2rem; flex: 1;
+  align-items: center; gap: 0.25rem;
+  min-width: 80px; flex: 1;
 }
 .history-cell__tag {
   font-size: 0.6rem; text-transform: uppercase;
-  letter-spacing: 0.06em; color: var(--dim);
+  letter-spacing: 0.06em; color: var(--dim); white-space: nowrap;
 }
 .history-cell select {
   background: var(--panel-3); color: var(--text);
   border: 1px solid var(--border); border-radius: 6px;
-  padding: 0.38rem 0.3rem; font-size: 0.84rem;
+  padding: 0.42rem 0.4rem; font-size: 0.88rem;
   font-family: inherit; width: 100%; text-align: center;
   cursor: pointer;
 }
@@ -152,8 +154,8 @@ section h2 {
   outline: none; border-color: var(--accent);
 }
 .history-sep {
-  color: var(--dim); font-size: 0.7rem;
-  margin-top: 14px; flex-shrink: 0;
+  color: var(--dim); font-size: 0.75rem;
+  margin-bottom: 10px; flex-shrink: 0;
 }
 
 /* ── Form actions ─────────────────────────────────── */
@@ -176,6 +178,15 @@ section h2 {
 }
 .btn--primary:hover { filter: brightness(1.1); }
 .btn--ghost { background: transparent; }
+.btn--demo {
+  background: transparent; color: var(--good);
+  border-color: var(--good); font-weight: 600;
+}
+.btn--demo:hover { background: rgba(46,204,113,0.12); border-color: var(--good); }
+.btn--demo.running {
+  color: var(--warn); border-color: var(--warn);
+}
+.btn--demo.running:hover { background: rgba(245,158,11,0.12); }
 .error { color: var(--bad); font-size: 0.82rem; }
 
 /* ── Result panel ─────────────────────────────────── */
@@ -290,7 +301,7 @@ section h2 {
 }
 @media (max-width: 600px) {
   .field-row--3 { grid-template-columns: 1fr 1fr; }
-  .history-row  { flex-direction: column; align-items: flex-start; }
+  .field-row--4 { grid-template-columns: 1fr 1fr; }
   .history-row__cells { flex-wrap: wrap; }
 }
 
@@ -321,5 +332,5 @@ section h2 {
 .score-diff-label {
   font-size: 0.7rem; color: var(--dim); text-align: center;
 }
-.field-row--4 { grid-template-columns: repeat(4, 1fr); }
+.field-row--4 { grid-template-columns: 1fr 1.5fr 1fr 1.3fr; }
 .field-row--2 { grid-template-columns: repeat(2, 1fr); }
